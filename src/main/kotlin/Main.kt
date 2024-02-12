@@ -1,6 +1,6 @@
-data class ParserResult<OutS, R>(val outState: OutS, val res: R)
+data class ParserResult<out OutS, out R>(val outState: OutS, val res: R)
 
-class Parser<InS, OutS, R>(val inner: (InS) -> Sequence<ParserResult<OutS, R>>) {
+class Parser<in InS, out OutS, R>(val inner: (InS) -> Sequence<ParserResult<OutS, R>>) {
     fun parse(i: InS) = inner(i)
 }
 
@@ -56,17 +56,8 @@ fun <In, Out, R> sub(p: Parser<In, Out, R>): Parser<In, In, R> {
     }
 }
 
-fun <In, Out, R> exists(p: Parser<In, Out, R>, input: In): Boolean {
-    return p.parse(input).iterator().hasNext()
-}
-
-fun <In, Out, R> Parser<In, Out, R>.filter(p: (In) -> Boolean): Parser<In, Out, R> {
-    return Parser { input ->
-        if (p(input))
-            this.parse(input)
-        else
-            emptySequence()
-    }
+fun <In, Out, Out2, R, R2> Parser<In, Out, R>.that(constraint: Parser<Out, Out2, R2>): Parser<In, Out, R> {
+    return this seql sub(constraint)
 }
 
 fun <I, O, R> fix(f: (Parser<I, O, R>) -> Parser<I, O, R>): Parser<I, O, R> {
@@ -126,57 +117,50 @@ data class SimpleNode(val value: String)
 data class SimpleEdge(val label: String)
 
 class Graph<N, E> {
-    val matrix = HashMap<N, MutableList<Pair<E, N>>>()
-    val nodes: MutableSet<N> = HashSet()
-    val edges: MutableSet<E> = HashSet()
+    val nodesEdges = HashMap<N, MutableList<Pair<E, N>>>()
+    val nodes = HashSet<N>()
 
     fun addNode(node: N) {
         nodes.add(node)
     }
 
     fun addEdge(u: N, edge: E, v: N) {
-        edges.add(edge)
         addNode(u)
         addNode(v)
-        matrix.getOrPut(u) { ArrayList() }.add(Pair(edge, v))
+        nodesEdges.getOrPut(u) { ArrayList() }.add(Pair(edge, v))
     }
 
-    fun getEdges(v: N): MutableList<Pair<E, N>>? = matrix[v]
-
-    fun <Out, R> applyParser(parser: Parser<NodeState<N, E>, Out, R>): Sequence<R> {
-        val gr = this
-        return sequence {
-            for (node in nodes) {
-                yieldAll(parser.parse(NodeState(gr, node)).map { it.res })
-            }
-        }
+    fun <Out, R> applyParser(parser: Parser<StartState<N, E>, Out, R>): Sequence<R> {
+        return parser.parse(StartState(this)).map { it.res }
     }
 }
 
+data class StartState<N, E>(val graph: Graph<N, E>)
 data class NodeState<N, E>(val graph: Graph<N, E>, val node: N)
-data class EdgeState<N, E>(val graph: Graph<N, E>, val edge: E, val endNode: N)
+data class EdgeState<N, E>(val graph: Graph<N, E>, val edge: E, val outNode: N)
 
 
-fun <N, E> vThat(p: (N) -> Boolean): Parser<NodeState<N, E>, EdgeState<N, E>, N> {
-    return Parser { (gr, node) ->
-        val edges = gr.getEdges(node)
-        val edgeStates = if (p(node) && edges != null)
-            edges.map { (edge, endNode) -> EdgeState(gr, edge, endNode) }.asSequence()
-        else
-            emptySequence()
-        edgeStates.map { ParserResult(it, node) }
+fun <N, E> outV(p: (N) -> Boolean): Parser<EdgeState<N, E>, NodeState<N, E>, N> {
+    return Parser { (gr, _, outV) ->
+        if (!p(outV)) return@Parser emptySequence()
+        sequenceOf(ParserResult(NodeState(gr, outV), outV))
     }
 }
 
-fun <N, E> v(): Parser<NodeState<N, E>, EdgeState<N, E>, N> = vThat { true }
+fun <N, E> outV(): Parser<EdgeState<N, E>, NodeState<N, E>, N> = outV { true }
 
-fun <N, E> edgeThat(p: (E) -> Boolean): Parser<EdgeState<N, E>, NodeState<N, E>, E> {
-    return Parser { (gr, edge, endNode) ->
-        val nodeStates = if (p(edge))
-            sequenceOf(NodeState(gr, endNode))
-        else
-            emptySequence()
-        nodeStates.map { ParserResult(it, edge) }
+fun <N, E> v(p: (N) -> Boolean): Parser<StartState<N, E>, NodeState<N, E>, N> {
+    return Parser { (gr) ->
+        gr.nodes.asSequence().filter(p).map { ParserResult(NodeState(gr, it), it) }
+    }
+}
+
+fun <N, E> v(): Parser<StartState<N, E>, NodeState<N, E>, N> = v { true }
+
+fun <N, E> edge(p: (E) -> Boolean): Parser<NodeState<N, E>, EdgeState<N, E>, E> {
+    return Parser { (gr, node) ->
+        val edges = gr.nodesEdges[node] ?: return@Parser emptySequence()
+        edges.asSequence().filter { p(it.first) }.map { (edge, outV) -> ParserResult(EdgeState(gr, edge, outV), edge) }
     }
 }
 
@@ -195,7 +179,6 @@ fun main() {
 }
 
 fun graph() {
-
     val gr = Graph<SimpleNode, SimpleEdge>().apply {
         val nA = SimpleNode("A")
         val eB = SimpleEdge("B")
@@ -204,16 +187,19 @@ fun graph() {
         addEdge(nA, eC, nA)
     }
 
+    val nodeA = v<SimpleNode, SimpleEdge> { it.value == "A" }
+    val outNodeA = outV<SimpleNode, SimpleEdge> { it.value == "A" }
+    val edgeB = edge<SimpleNode, SimpleEdge> { it.label == "B" }
+    val edgeC = edge<SimpleNode, SimpleEdge> { it.label == "C" }
 
-    val nodeA = vThat<SimpleNode, SimpleEdge> { it.value == "A" }
-    val edgeB = edgeThat<SimpleNode, SimpleEdge> { it.label == "B" }
-    val edgeC = edgeThat<SimpleNode, SimpleEdge> { it.label == "C" }
-
-    val p = ((nodeA seq edgeB) or (nodeA seq edgeC)).many
+    val p = nodeA seq ((edgeB or edgeC) seq outNodeA).many
 
     gr.applyParser(p)
         .take(20)
-        .forEach { println(it.joinToString("") { (n, e) -> "(${n.value})-${e.label}->" }) }
+        .forEach { (first, seq) ->
+            print("(${first.value})")
+            println(seq.joinToString("") { (e, n) -> "-${e.label}->(${n.value})" })
+        }
 }
 
 fun graphFilter() {
@@ -229,19 +215,19 @@ fun graphFilter() {
         addEdge(john, friend, linda)
     }
 
-
-    val p = v<SimpleNode, SimpleEdge>()
-    val mary = vThat<SimpleNode, SimpleEdge> { it.value == "Mary" }
-    val loves = edgeThat<SimpleNode, SimpleEdge> { it.label == "loves" }
-    val friend = edgeThat<SimpleNode, SimpleEdge> { it.label == "friend" }
-    val parser = p seq friend seq p
+    val person = v<SimpleNode, SimpleEdge>()
+    val mary = outV<SimpleNode, SimpleEdge> { it.value == "Mary" }
+    val loves = edge<SimpleNode, SimpleEdge> { it.label == "loves" }
+    val friend = edge<SimpleNode, SimpleEdge> { it.label == "friend" }
+    val maryLover = person.that(loves seq mary)
+    val parser = maryLover seq friend seq outV()
 
     gr.applyParser(parser)
         .forEach { println(it) }
 }
 
 fun test1() {
-    val p = vThat<SimpleNode, SimpleEdge> { it.value == "Dan" } seqr edgeThat { it.label == "LOVES" } seqr v()
+    val p = v<SimpleNode, SimpleEdge> { it.value == "Dan" } seqr edge { it.label == "loves" } seqr outV()
 }
 
 fun ambigious() {
