@@ -41,7 +41,7 @@ class SimpleGraph : Graph<SimpleValue, SimpleLabel> {
 }
 
 
-object TestParsers : Parsers<SimpleGraph>, GraphParsers<SimpleGraph, SimpleValue, SimpleLabel>
+object TestParsers : GraphParsers<SimpleGraph, SimpleValue, SimpleLabel>
 
 class GraphParserTests {
 

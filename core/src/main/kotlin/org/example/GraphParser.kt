@@ -18,8 +18,7 @@ class StartState
 data class VertexState<V>(val v: Vertex<V>)
 data class EdgeState<E>(val edge: Edge<E>)
 
-interface GraphParsers<G : Graph<V, E>, V, E> {
-
+interface GraphParsers<G : Graph<V, E>, V, E>: Parsers<G> {
 
     fun outV(p: (V) -> Boolean): Parser<G, EdgeState<E>, VertexState<V>, V> {
         return Parser { gr, (edge) ->
