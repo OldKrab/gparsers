@@ -1,19 +1,18 @@
 package org.example
 
-typealias StringParser<R> = Parser<StringPos, StringPos, R>
+typealias StringParser<R> = Parser<String, StringPos, StringPos, R>
 
-data class StringPos(val s: String, val pos: Int) {
-    constructor(s: String) : this(s, 0)
+data class StringPos(val pos: Int) {
+    fun move(d: Int) = StringPos(pos + d)
 
-    fun move(d: Int) = StringPos(s, pos + d)
-
-    fun startsWith(sub: String) = s.startsWith(sub, pos)
 }
 
 val String.l
-    get() = StringParser { i ->
-        if (i.startsWith(this))
+    get() = StringParser { str, i ->
+        if (str.startsWith(this, i.pos))
             sequenceOf(ParserResult(i.move(this.length), this))
         else
             emptySequence()
     }
+
+object StringParsers: Parsers<String>

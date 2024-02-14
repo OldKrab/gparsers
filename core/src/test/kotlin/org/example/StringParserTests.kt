@@ -1,10 +1,17 @@
 package org.example
 
+import org.example.StringParsers.fix
+import org.example.StringParsers.many
+import org.example.StringParsers.seq
+import org.example.StringParsers.seql
+import org.example.StringParsers.seqr
+import org.example.StringParsers.or
+import org.example.StringParsers.using
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
-class StringParserTests {
 
+class StringParserTests {
 
 
     @Test
@@ -14,8 +21,8 @@ class StringParserTests {
             (a seqr S seql a).many using { s -> s.joinToString(separator = "") { "[a${it}a]" } }
         }
 
-        val str2 = "aaaaaa"
-        ambiguous.parse(StringPos(str2)).forEach { println(it) }
+        val str = "aaaaaa"
+        ambiguous.parse(str, StringPos(0)).forEach { println(it) }
 
     }
 
@@ -27,7 +34,7 @@ class StringParserTests {
         }
 
         val str = "[][[][]]"
-        brackets.parse(StringPos(str)).forEach { println(it) }
+        brackets.parse(str, StringPos(0)).forEach { println(it) }
     }
 
     @Test
@@ -38,8 +45,8 @@ class StringParserTests {
                 (S seq a using { a, b -> "${a}${b}" }) or "".l
             }
 
-            val str2 = "aaaaaa"
-            p.parse(StringPos(str2)).forEach { println(it) }
+            val str = "aaaaaa"
+            p.parse(str, StringPos(0)).forEach { println(it) }
         }
 
     }

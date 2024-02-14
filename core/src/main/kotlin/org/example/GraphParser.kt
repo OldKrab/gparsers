@@ -1,41 +1,51 @@
 package org.example
 
-abstract class Graph<V, E> {
-    abstract fun getEdges(v: V): List<Pair<E, V>>?
-    abstract fun getVertexes(): Set<V>
-
-    fun <Out, R> applyParser(parser: Parser<StartState<V, E>, Out, R>): Sequence<R> {
-        return parser.parse(StartState(this)).map { it.res }
-    }
+interface Graph<V, E> {
+    fun getEdges(v: Vertex<V>): List<Edge<E>>?
+    fun getVertexes(): Set<Vertex<V>>
+    fun getEdgeVertexes(e: Edge<E>): Pair<Vertex<V>, Vertex<V>>?
 }
 
-data class StartState<V, E>(val graph: Graph<V, E>)
-data class VertexState<V, E>(val graph: Graph<V, E>, val v: V)
-data class EdgeState<V, E>(val graph: Graph<V, E>, val edge: E, val outV: V)
-
-
-fun <V, E> outV(p: (V) -> Boolean): Parser<EdgeState<V, E>, VertexState<V, E>, V> {
-    return Parser { (gr, _, outV) ->
-        if (!p(outV)) return@Parser emptySequence()
-        sequenceOf(ParserResult(VertexState(gr, outV), outV))
-    }
+fun <V, E, G : Graph<V, E>, Out, R> G.applyParser(parser: Parser<G, StartState, Out, R>): Sequence<R> {
+    return parser.parse(this, StartState()).map { it.res }
 }
 
-fun <V, E> outV(): Parser<EdgeState<V, E>, VertexState<V, E>, V> = outV { true }
+data class Vertex<V>(val value: V)
+data class Edge<E>(val label: E)
 
-fun <V, E> v(p: (V) -> Boolean): Parser<StartState<V, E>, VertexState<V, E>, V> {
-    return Parser { (gr) ->
-        gr.getVertexes().asSequence().filter(p).map { ParserResult(VertexState(gr, it), it) }
+
+class StartState
+data class VertexState<V>(val v: Vertex<V>)
+data class EdgeState<E>(val edge: Edge<E>)
+
+interface GraphParsers<G : Graph<V, E>, V, E> {
+
+
+    fun outV(p: (V) -> Boolean): Parser<G, EdgeState<E>, VertexState<V>, V> {
+        return Parser { gr, (edge) ->
+            val (_, outV) = gr.getEdgeVertexes(edge) ?: return@Parser emptySequence()
+            if (!p(outV.value)) return@Parser emptySequence()
+            sequenceOf(ParserResult(VertexState(outV), outV.value))
+        }
     }
-}
 
-fun <V, E> v(): Parser<StartState<V, E>, VertexState<V, E>, V> = v { true }
+    fun outV(): Parser<G, EdgeState<E>, VertexState<V>, V> = outV { true }
 
-fun <V, E> edge(p: (E) -> Boolean): Parser<VertexState<V, E>, EdgeState<V, E>, E> {
-    return Parser { (gr, v) ->
-        val edges = gr.getEdges(v) ?: return@Parser emptySequence()
-        edges.asSequence().filter { p(it.first) }.map { (edge, outV) -> ParserResult(EdgeState(gr, edge, outV), edge) }
+    fun v(p: (V) -> Boolean): Parser<G, StartState, VertexState<V>, V> {
+        return Parser { gr, _ ->
+            gr.getVertexes().asSequence().filter { p(it.value) }.map { ParserResult(VertexState(it), it.value) }
+        }
     }
+
+    fun v(): Parser<G, StartState, VertexState<V>, V> = v { true }
+
+    fun edge(p: (E) -> Boolean): Parser<G, VertexState<V>, EdgeState<E>, E> {
+        return Parser { gr, (v) ->
+            val edges = gr.getEdges(v) ?: return@Parser emptySequence()
+            edges.asSequence().filter { e -> p(e.label) }.map { e -> ParserResult(EdgeState(e), e.label) }
+        }
+    }
+
 }
 
 
