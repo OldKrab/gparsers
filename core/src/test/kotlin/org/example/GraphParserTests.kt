@@ -98,12 +98,11 @@ class GraphParserTests {
             addEdge(nA, eC, nA)
         }
 
-        val nodeA = v { it.value == "A" }
-        val outNodeA = outV { it.value == "A" }
+        val isA: (SimpleValue) -> Boolean = { it.value == "A" }
         val edgeB = edge { it.label == "B" }
         val edgeC = edge { it.label == "C" }
 
-        val p = nodeA seq ((edgeB or edgeC) seq outNodeA).many
+        val p = v(isA) seq ((edgeB or edgeC) seq outV(isA)).many
         val res = gr.applyParser(p).take(20).toList()
         res.forEach { (first, seq) ->
             print("(${first.value})")
