@@ -10,9 +10,9 @@ data class StringPos(val pos: Int) {
 val String.l
     get() = StringParser { str, i ->
         if (str.startsWith(this, i.pos))
-            sequenceOf(ParserResult(i.move(this.length), this))
+            success(i.move(this.length), this)
         else
-            emptySequence()
+            failure()
     }
 
 object StringParsers: Parsers<String>

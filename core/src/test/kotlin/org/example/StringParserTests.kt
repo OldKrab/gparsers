@@ -22,7 +22,7 @@ class StringParserTests {
         }
 
         val str = "aaaaaa"
-        ambiguous.parse(str, StringPos(0)).forEach { println(it) }
+        ambiguous.getResults(str, StringPos(0)).forEach { println(it) }
 
     }
 
@@ -34,7 +34,7 @@ class StringParserTests {
         }
 
         val str = "[][[][]]"
-        brackets.parse(str, StringPos(0)).forEach { println(it) }
+        brackets.getResults(str, StringPos(0)).forEach { println(it) }
     }
 
     @Test
@@ -46,7 +46,7 @@ class StringParserTests {
             }
 
             val str = "aaaaaa"
-            p.parse(str, StringPos(0)).forEach { println(it) }
+            p.getResults(str, StringPos(0)).forEach { println(it) }
         }
 
     }

@@ -103,7 +103,7 @@ class GraphParserTests {
         val edgeC = edge { it.label == "C" }
 
         val p = v(isA) seq ((edgeB or edgeC) seq outV(isA)).many
-        val res = gr.applyParser(p).take(20).toList()
+        val res = gr.applyParser(p, 20).toList()
         res.forEach { (first, seq) ->
             print("(${first.value})")
             println(seq.joinToString("") { (e, n) -> "-${e.label}->(${n.value})" })

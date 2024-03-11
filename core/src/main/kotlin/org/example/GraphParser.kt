@@ -1,13 +1,14 @@
 package org.example
 
+
 interface Graph<V, E> {
     fun getEdges(v: Vertex<V>): List<Edge<E>>?
     fun getVertexes(): Set<Vertex<V>>
     fun getEdgeVertexes(e: Edge<E>): Pair<Vertex<V>, Vertex<V>>?
 }
 
-fun <V, E, G : Graph<V, E>, Out, R> G.applyParser(parser: Parser<G, StartState, Out, R>): Sequence<R> {
-    return parser.parse(this, StartState()).map { it.res }
+fun <V, E, G : Graph<V, E>, Out, R> G.applyParser(parser: Parser<G, StartState, Out, R>, count: Int = -1): List<R> {
+    return parser.getResults(this, StartState(), count).map { it.second }
 }
 
 data class Vertex<V>(val value: V)
@@ -18,13 +19,13 @@ class StartState
 data class VertexState<V>(val v: Vertex<V>)
 data class EdgeState<E>(val edge: Edge<E>)
 
-interface GraphParsers<G : Graph<V, E>, V, E>: Parsers<G> {
+interface GraphParsers<G : Graph<V, E>, V, E> : Parsers<G> {
 
     fun outV(p: (V) -> Boolean): Parser<G, EdgeState<E>, VertexState<V>, V> {
         return Parser { gr, (edge) ->
-            val (_, outV) = gr.getEdgeVertexes(edge) ?: return@Parser emptySequence()
-            if (!p(outV.value)) return@Parser emptySequence()
-            sequenceOf(ParserResult(VertexState(outV), outV.value))
+            val (_, outV) = gr.getEdgeVertexes(edge) ?: return@Parser failure()
+            if (!p(outV.value)) return@Parser failure()
+            success(VertexState(outV), outV.value)
         }
     }
 
@@ -32,7 +33,12 @@ interface GraphParsers<G : Graph<V, E>, V, E>: Parsers<G> {
 
     fun v(p: (V) -> Boolean): Parser<G, StartState, VertexState<V>, V> {
         return Parser { gr, _ ->
-            gr.getVertexes().asSequence().filter { p(it.value) }.map { ParserResult(VertexState(it), it.value) }
+            gr.getVertexes()
+                .filter { p(it.value) }
+                .map {
+                    success(VertexState(it), it.value)
+                }
+                .reduce { acc, cur -> acc.orElse { cur } }
         }
     }
 
@@ -40,8 +46,11 @@ interface GraphParsers<G : Graph<V, E>, V, E>: Parsers<G> {
 
     fun edge(p: (E) -> Boolean): Parser<G, VertexState<V>, EdgeState<E>, E> {
         return Parser { gr, (v) ->
-            val edges = gr.getEdges(v) ?: return@Parser emptySequence()
-            edges.asSequence().filter { e -> p(e.label) }.map { e -> ParserResult(EdgeState(e), e.label) }
+            val edges = gr.getEdges(v) ?: return@Parser failure()
+            edges
+                .filter { e -> p(e.label) }
+                .map { e -> success(EdgeState(e), e.label) }
+                .fold(failure()) { acc, cur -> acc.orElse { cur } }
         }
     }
 
