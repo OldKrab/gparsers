@@ -12,11 +12,11 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 data class SimpleValue(val value: String)
-data class SimpleLabel(val label: String)
+data class SimpleEdge(val label: String)
 
-class SimpleGraph : Graph<SimpleValue, SimpleLabel> {
-    private val vertexesEdges = HashMap<Vertex<SimpleValue>, MutableList<Edge<SimpleLabel>>>()
-    private val edgeVertexes = HashMap<Edge<SimpleLabel>, Pair<Vertex<SimpleValue>, Vertex<SimpleValue>>>()
+class SimpleGraph : Graph<SimpleValue, SimpleEdge> {
+    private val vertexesEdges = HashMap<Vertex<SimpleValue>, MutableList<Edge<SimpleEdge>>>()
+    private val edgeVertexes = HashMap<Edge<SimpleEdge>, Pair<Vertex<SimpleValue>, Vertex<SimpleValue>>>()
     private val vertexes = HashSet<Vertex<SimpleValue>>()
 
     fun addVertex(value: SimpleValue): Vertex<SimpleValue> {
@@ -25,7 +25,7 @@ class SimpleGraph : Graph<SimpleValue, SimpleLabel> {
         return v
     }
 
-    fun addEdge(u: SimpleValue, label: SimpleLabel, v: SimpleValue) {
+    fun addEdge(u: SimpleValue, label: SimpleEdge, v: SimpleValue) {
         val vU = addVertex(u)
         val vV = addVertex(v)
         val edge = Edge(label)
@@ -33,15 +33,15 @@ class SimpleGraph : Graph<SimpleValue, SimpleLabel> {
         edgeVertexes[edge] = Pair(vU, vV)
     }
 
-    override fun getEdges(v: Vertex<SimpleValue>): List<Edge<SimpleLabel>>? = vertexesEdges[v]
+    override fun getEdges(v: Vertex<SimpleValue>): List<Edge<SimpleEdge>>? = vertexesEdges[v]
     override fun getVertexes(): Set<Vertex<SimpleValue>> = vertexes
 
-    override fun getEdgeVertexes(e: Edge<SimpleLabel>): Pair<Vertex<SimpleValue>, Vertex<SimpleValue>>? =
+    override fun getEdgeVertexes(e: Edge<SimpleEdge>): Pair<Vertex<SimpleValue>, Vertex<SimpleValue>>? =
         edgeVertexes[e]
 }
 
 
-object TestParsers : GraphParsers<SimpleGraph, SimpleValue, SimpleLabel>
+object TestParsers : GraphParsers<SimpleGraph, SimpleValue, SimpleEdge>
 
 class GraphParserTests {
 
@@ -50,16 +50,18 @@ class GraphParserTests {
     fun simpleNode() {
         val nA = SimpleValue("A")
         val gr = SimpleGraph().apply {
-            val eB = SimpleLabel("B")
+            val eB = SimpleEdge("B")
             addEdge(nA, eB, nA)
         }
-        assertEquals(listOf(nA), gr.applyParser(v { it.value == "A" }).toList())
+
+        val parser = v { it.value == "A" }
+        assertEquals(listOf(nA), gr.applyParser(parser).toList())
     }
 
     @Test
     fun simpleNodeAndEdge() {
         val nA = SimpleValue("A")
-        val eB = SimpleLabel("B")
+        val eB = SimpleEdge("B")
         val gr = SimpleGraph().apply {
             addEdge(nA, eB, nA)
         }
@@ -72,8 +74,8 @@ class GraphParserTests {
     @Test
     fun or() {
         val nA = SimpleValue("A")
-        val eB = SimpleLabel("B")
-        val eC = SimpleLabel("C")
+        val eB = SimpleEdge("B")
+        val eC = SimpleEdge("C")
         val gr = SimpleGraph().apply {
             addEdge(nA, eB, nA)
             addEdge(nA, eC, nA)
@@ -92,8 +94,8 @@ class GraphParserTests {
     fun many() {
         val gr = SimpleGraph().apply {
             val nA = SimpleValue("A")
-            val eB = SimpleLabel("B")
-            val eC = SimpleLabel("C")
+            val eB = SimpleEdge("B")
+            val eC = SimpleEdge("C")
             addEdge(nA, eB, nA)
             addEdge(nA, eC, nA)
         }
@@ -114,10 +116,10 @@ class GraphParserTests {
     @Test
     fun withThat() {
         val danV = SimpleValue("Dan")
-        val friendE = SimpleLabel("friend")
+        val friendE = SimpleEdge("friend")
         val lindaV = SimpleValue("Linda")
         val gr = SimpleGraph().apply {
-            val loves = SimpleLabel("loves")
+            val loves = SimpleEdge("loves")
             val john = SimpleValue("John")
             val mary = SimpleValue("Mary")
             addEdge(danV, friendE, john)

@@ -22,9 +22,9 @@ data class EdgeState<E>(val edge: Edge<E>)
 interface GraphParsers<G : Graph<V, E>, V, E> : Parsers<G> {
 
     fun outV(p: (V) -> Boolean): Parser<G, EdgeState<E>, VertexState<V>, V> {
-        return Parser { gr, (edge) ->
-            val (_, outV) = gr.getEdgeVertexes(edge) ?: return@Parser failure()
-            if (!p(outV.value)) return@Parser failure()
+        return Parser.make("outV") { gr, (edge) ->
+            val (_, outV) = gr.getEdgeVertexes(edge) ?: return@make failure()
+            if (!p(outV.value)) return@make failure()
             success(VertexState(outV), outV.value)
         }
     }
@@ -32,7 +32,7 @@ interface GraphParsers<G : Graph<V, E>, V, E> : Parsers<G> {
     fun outV(): Parser<G, EdgeState<E>, VertexState<V>, V> = outV { true }
 
     fun v(p: (V) -> Boolean): Parser<G, StartState, VertexState<V>, V> {
-        return Parser { gr, _ ->
+        return Parser.make("v") { gr, _ ->
             gr.getVertexes()
                 .filter { p(it.value) }
                 .map {
@@ -45,8 +45,8 @@ interface GraphParsers<G : Graph<V, E>, V, E> : Parsers<G> {
     fun v(): Parser<G, StartState, VertexState<V>, V> = v { true }
 
     fun edge(p: (E) -> Boolean): Parser<G, VertexState<V>, EdgeState<E>, E> {
-        return Parser { gr, (v) ->
-            val edges = gr.getEdges(v) ?: return@Parser failure()
+        return Parser.make("edge") { gr, (v) ->
+            val edges = gr.getEdges(v) ?: return@make failure()
             edges
                 .filter { e -> p(e.label) }
                 .map { e -> success(EdgeState(e), e.label) }
