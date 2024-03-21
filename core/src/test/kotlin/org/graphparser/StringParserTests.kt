@@ -1,12 +1,15 @@
 package org.graphparser
 
-import org.graphparser.StringParsers.fix
-import org.graphparser.StringParsers.many
-import org.graphparser.StringParsers.seq
-import org.graphparser.StringParsers.seql
-import org.graphparser.StringParsers.seqr
-import org.graphparser.StringParsers.rule
-import org.graphparser.StringParsers.using
+import org.parser.combinators.string.StringParser
+import org.parser.combinators.string.StringCombinators.fix
+import org.parser.combinators.string.StringCombinators.many
+import org.parser.combinators.string.StringCombinators.seq
+import org.parser.combinators.string.StringCombinators.seql
+import org.parser.combinators.string.StringCombinators.seqr
+import org.parser.combinators.string.StringCombinators.rule
+import org.parser.combinators.string.StringCombinators.using
+import org.parser.combinators.string.applyParser
+import org.parser.combinators.string.p
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 

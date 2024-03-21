@@ -1,4 +1,8 @@
-package org.graphparser
+package org.parser.combinators.string
+
+import org.parser.combinators.Combinators
+import org.parser.combinators.Parser
+import org.parser.combinators.ParserResult
 
 typealias StringParser<R> = Parser<String, StringPos, StringPos, R>
 
@@ -12,11 +16,11 @@ fun <R> String.applyParser(parser: StringParser<R>, count: Int = -1): List<Pair<
 }
 
 val String.p: StringParser<String>
-    get() = StringParser.make("literal") { str, i ->
+    get() = Parser.make("literal") { str, i ->
         if (str.startsWith(this, i.pos))
-            success(i.move(this.length), this)
+            ParserResult.success(i.move(this.length), this)
         else
-            failure()
+            ParserResult.failure()
     }
 
-object StringParsers: Parsers<String>
+object StringCombinators: Combinators<String>

@@ -1,15 +1,16 @@
 package org.graphparser
 
-import org.graphparser.TestParsers.edge
-import org.graphparser.TestParsers.many
-import org.graphparser.TestParsers.or
-import org.graphparser.TestParsers.outV
-import org.graphparser.TestParsers.seq
-import org.graphparser.TestParsers.seqr
-import org.graphparser.TestParsers.that
-import org.graphparser.TestParsers.v
+import org.graphparser.TestCombinators.edge
+import org.graphparser.TestCombinators.many
+import org.graphparser.TestCombinators.or
+import org.graphparser.TestCombinators.outV
+import org.graphparser.TestCombinators.seq
+import org.graphparser.TestCombinators.seqr
+import org.graphparser.TestCombinators.that
+import org.graphparser.TestCombinators.v
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import org.parser.combinators.graph.*
 
 private data class SimpleVertex(val value: String)
 private data class SimpleEdge(val label: String)
@@ -41,7 +42,7 @@ private class SimpleGraph : Graph<SimpleVertex, SimpleEdge> {
 }
 
 
-private object TestParsers : GraphParsers<SimpleGraph, SimpleVertex, SimpleEdge>
+private object TestCombinators : GraphCombinators<SimpleGraph, SimpleVertex, SimpleEdge>
 
 class GraphParserTests {
 
