@@ -1,4 +1,4 @@
-package org.example
+package org.graphparser
 
 
 interface Graph<V, E> {

@@ -1,4 +1,4 @@
-package org.example
+package org.graphparser
 
 
 typealias Continuation<OutS, R> = (OutS, R) -> Unit

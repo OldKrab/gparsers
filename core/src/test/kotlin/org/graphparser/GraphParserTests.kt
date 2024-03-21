@@ -1,13 +1,13 @@
-package org.example
+package org.graphparser
 
-import org.example.TestParsers.edge
-import org.example.TestParsers.many
-import org.example.TestParsers.or
-import org.example.TestParsers.outV
-import org.example.TestParsers.seq
-import org.example.TestParsers.seqr
-import org.example.TestParsers.that
-import org.example.TestParsers.v
+import org.graphparser.TestParsers.edge
+import org.graphparser.TestParsers.many
+import org.graphparser.TestParsers.or
+import org.graphparser.TestParsers.outV
+import org.graphparser.TestParsers.seq
+import org.graphparser.TestParsers.seqr
+import org.graphparser.TestParsers.that
+import org.graphparser.TestParsers.v
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 

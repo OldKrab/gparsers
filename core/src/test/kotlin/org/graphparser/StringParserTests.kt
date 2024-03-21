@@ -1,12 +1,12 @@
-package org.example
+package org.graphparser
 
-import org.example.StringParsers.fix
-import org.example.StringParsers.many
-import org.example.StringParsers.seq
-import org.example.StringParsers.seql
-import org.example.StringParsers.seqr
-import org.example.StringParsers.rule
-import org.example.StringParsers.using
+import org.graphparser.StringParsers.fix
+import org.graphparser.StringParsers.many
+import org.graphparser.StringParsers.seq
+import org.graphparser.StringParsers.seql
+import org.graphparser.StringParsers.seqr
+import org.graphparser.StringParsers.rule
+import org.graphparser.StringParsers.using
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 

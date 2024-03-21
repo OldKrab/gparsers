@@ -1,4 +1,4 @@
-package org.example
+package org.graphparser
 
 typealias StringParser<R> = Parser<String, StringPos, StringPos, R>
 
