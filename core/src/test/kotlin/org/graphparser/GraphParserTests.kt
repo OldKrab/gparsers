@@ -45,6 +45,8 @@ private class SimpleGraph : Graph<SimpleVertex, SimpleEdge> {
     }
 
     fun addEdge(u: SimpleVertex, e: SimpleEdge, v: SimpleVertex) {
+        addVertex(u)
+        addVertex(v)
         vertexesEdges.getOrPut(v) { ArrayList() }.add(e)
         edgeVertexes[e] = Pair(u, v)
     }
@@ -66,6 +68,7 @@ class GraphParserTests {
     fun simpleNode() {
         val nA = SimpleVertex("A")
         val gr = SimpleGraph().apply {
+            addVertex(nA)
             val eB = SimpleEdge("B")
             addEdge(nA, eB, nA)
         }
@@ -138,6 +141,7 @@ class GraphParserTests {
 
         val p = v(isA) seq ((edgeB or edgeC) seq outV(isA)).many
         val results = gr.applyParser(p)
+        results.forEach { println(it) }
         val dir = Path.of(System.getProperty("java.io.tmpdir")).resolve("many").createDirectories()
         for (i in results.indices) {
             Visualizer().toDotFile(results[i], dir.resolve("$i.dot"))
@@ -215,10 +219,32 @@ class GraphParserTests {
         vA.name = "vA"
         val edgeB = edge { it.label == "B" }
         edgeB.name = "eB"
-        val x = (edgeB seq vA).many using { _ -> }
+        val x = (edgeB seq vA).many
         val results = applyParser(gr, x, VertexState(SimpleVertex("A")))
         results.forEach { println(it) }
-        val dir = Path.of(System.getProperty("java.io.tmpdir")).resolve("loop").createDirectories()
+        val dir = Path.of(System.getProperty("java.io.tmpdir")).resolve("loopWithMany").createDirectories()
+        for (i in results.indices) {
+            Visualizer().toDotFile(results[i], dir.resolve("$i.dot"))
+        }
+        println("Look images in '$dir'")
+    }
+
+    @Test
+    fun loopWithManyWithStartState() {
+        val gr = SimpleGraph().apply {
+            val nA = SimpleVertex("A")
+            val eB = SimpleEdge("B")
+            addEdge(nA, eB, nA)
+        }
+
+        val vA = outV { it.value == "A" }
+        vA.name = "vA"
+        val edgeB = edge { it.label == "B" }
+        edgeB.name = "eB"
+        val x = v { it.value == "A" } seq (edgeB seq vA).many
+        val results = gr.applyParser(x)
+        results.forEach { println(it) }
+        val dir = Path.of(System.getProperty("java.io.tmpdir")).resolve("loopWithManyWithStartState").createDirectories()
         for (i in results.indices) {
             Visualizer().toDotFile(results[i], dir.resolve("$i.dot"))
         }

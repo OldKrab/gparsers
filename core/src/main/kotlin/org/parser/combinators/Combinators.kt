@@ -41,8 +41,11 @@ interface Combinators<E> {
     }
 
     infix fun <In, Out, R> Parser<E, In, Out, R>.or(other: Parser<E, In, Out, R>): Parser<E, In, Out, R> {
-        return Parser.memo("${this.name} | ${other.name}") { env, sppf, input ->
-            this.parse(env, sppf, input).orElse { other.parse(env, sppf, input) }
+        val name = "${this.name} | ${other.name}"
+        return return fix(name) { q ->
+            Parser.memo(name) { env, sppf, input ->
+                this.rule1(q).parse(env, sppf, input).orElse { other.rule1(q).parse(env, sppf, input) }
+            }
         }
     }
 
