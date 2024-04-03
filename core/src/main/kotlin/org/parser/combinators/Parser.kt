@@ -1,63 +1,57 @@
 package org.parser.combinators
 
+import org.parser.sppf.SPPF
+import org.parser.sppf.node.NonPackedNode
 
-
-class Parser<E, in InS, OutS, R> private constructor(
-    private val inner: (E, InS) -> ParserResult<OutS, R>,
-    private val name: String
-) {
-    class StopByLimitException : Exception("Stop parsing by limit")
-    fun parse(env: E, input: InS): ParserResult<OutS, R> = inner(env, input)
-    fun getResults(env: E, input: InS, count: Int = -1): List<Pair<OutS, R>> {
-        val res = ArrayList<Pair<OutS, R>>()
-        try {
-            this.parse(env, input).apply { s, r ->
-                res.add(Pair(s, r))
-                if (res.size == count)
-                    throw StopByLimitException()
-            }
-        } catch (_: StopByLimitException) {
-        }
-
-        return res
-    }
+interface BaseParser
+class Parser<E, InS, OutS, R> private constructor(
+    var inner: (E, SPPF<E>, InS) -> ParserResult<NonPackedNode<InS, OutS, R>>,
+    var name: String
+) : BaseParser {
+    fun parse(env: E, sppf: SPPF<E>, input: InS): ParserResult<NonPackedNode<InS, OutS, R>> =
+        inner(env, sppf, input)
 
     override fun toString(): String {
         return name
     }
 
     companion object {
-        fun <E, InS, OutS, R> make(name: String, inner: (E, InS) -> ParserResult<OutS, R>): Parser<E, InS, OutS, R> {
-            return memo(Parser(inner, name))
+        fun <E, InS, OutS, R> make(name: String, inner: (E, SPPF<E>, InS) -> ParserResult<NonPackedNode<InS, OutS, R>>): Parser<E, InS, OutS, R> {
+        return Parser(
+            { env, sppf, inS ->  inner(env, sppf, inS)  },
+            name
+        )
         }
-
-        private fun <E, InS, OutS, R> memo(parser: Parser<E, InS, OutS, R>): Parser<E, InS, OutS, R> {
-            val table = HashMap<Pair<E, InS>, ParserResult<OutS, R>>()
-            return Parser(
-                { env, inS -> table.getOrPut(Pair(env, inS)) { memoResult { parser.parse(env, inS) } } },
-                parser.name
+        fun <E, InS, OutS, R> memo(name: String, inner: (E, SPPF<E>, InS) -> ParserResult<NonPackedNode<InS, OutS, R>>): Parser<E, InS, OutS, R> {
+            val table = HashMap<Pair<E, InS>, ParserResult<NonPackedNode<InS, OutS, R>>>()
+            val res: Parser<E, InS, OutS, R> = Parser(
+                { env, sppf, inS -> table.computeIfAbsent(Pair(env, inS)) { memoResult(name) { inner(env, sppf, inS) } } },
+                name
             )
+            return res
         }
 
-        private fun <S, R> memoResult(res: () -> ParserResult<S, R>): ParserResult<S, R> {
-            val results = ArrayList<Pair<S, R>>()
-            val continuations = ArrayList<Continuation<S, R>>()
+        private fun <T> memoResult(name: String, res: () -> ParserResult<T>): ParserResult<T> {
+            val results = ArrayList<T>()
+            val continuations = ArrayList<Continuation<T>>()
             return ParserResult { k ->
-                val isFirstCall = continuations.isEmpty()
-                continuations.add(k)
-                if (isFirstCall) {
-                    res().apply { s, r ->
-                        val newState = Pair(s, r)
-                        if (!results.contains(newState)) {
-                            results.add(newState)
+                val name = name
+                if (continuations.isEmpty()) {
+                    continuations.add(k)
+                    val p = res()
+                    p.invoke { t ->
+                        val p = p
+                        if (!results.contains(t)) {
+                            results.add(t)
                             for (continuation in continuations) {
-                                continuation(s, r)
+                                continuation(t)
                             }
                         }
                     }
                 } else {
-                    for ((s, r) in results) {
-                        k(s, r)
+                    continuations.add(k)
+                    for (r in results) {
+                        k(r)
                     }
                 }
             }
@@ -65,5 +59,11 @@ class Parser<E, in InS, OutS, R> private constructor(
     }
 }
 
-
+fun <E, I, O, R> applyParser(env: E, parser: Parser<E, I, O, R>, inState: I, count: Int = -1): List<NonPackedNode<I, O, R>> {
+    val sppf = SPPF<E>()
+    val res = parser.parse(env, sppf, inState)
+    val trees = ArrayList<NonPackedNode<I, O, R>>()
+    res.invoke { t -> trees.add(t) }
+    return trees
+}
 

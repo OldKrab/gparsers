@@ -1,45 +1,48 @@
 package org.parser.combinators
 
-typealias Continuation<OutS, R> = (OutS, R) -> Unit
+typealias Continuation<N> = (N) -> Unit
 
 @JvmInline
-value class ParserResult<S, R>(private val f: (Continuation<S, R>) -> Unit) {
-    fun apply(k: Continuation<S, R>) {
-        f(k)
+value class ParserResult<T>(val invoke: (Continuation<T>) -> Unit) {
+    fun getResults(): List<T>{
+        val results = ArrayList<T>()
+        this.invoke {
+            results.add(it)
+        }
+        return results
     }
-
-    fun <S2, R2> map(transform: (S, R) -> Pair<S2, R2>): ParserResult<S2, R2> {
+    fun <T2> map(transform: (T) -> T2): ParserResult<T2> {
         return ParserResult { k ->
-            val k2: Continuation<S, R> = { s, r ->
-                val (s2, r2) = transform(s, r)
-                k(s2, r2)
+            val k2: Continuation<T> = { t ->
+                val t2 = transform(t)
+                k(t2)
             }
-            this.apply(k2)
+            this.invoke(k2)
         }
     }
 
-    fun <S2, R2> flatMap(transform: (S) -> ParserResult<S2, R2>): ParserResult<S2, Pair<R, R2>> {
+    fun <T2> flatMap(transform: (T) -> ParserResult<T2>): ParserResult<T2> {
         return ParserResult { k ->
-            val resK: Continuation<S, R> = { s, r1 ->
-                transform(s).apply { s2, r2 ->
-                    k(s2, Pair(r1, r2))
+            val resK: Continuation<T> = { t1 ->
+                transform(t1).invoke { t2 ->
+                    k(t2)
                 }
             }
-            this.apply(resK)
+            this.invoke(resK)
         }
     }
 
-    fun  orElse(nextRes: () -> ParserResult<S, R>): ParserResult<S, R> {
+    fun orElse(nextRes: () -> ParserResult<T>): ParserResult<T> {
         return ParserResult { k ->
-            this.apply(k)
-            nextRes().apply(k)
+            this.invoke(k)
+            nextRes().invoke(k)
         }
     }
 
     companion object {
-        fun <S, R> success(s: S, v: R): ParserResult<S, R> = ParserResult { k -> k(s, v) }
+        fun <T> success(t: T): ParserResult<T> = ParserResult { k -> k(t) }
 
-        fun <S, R> failure(): ParserResult<S, R> = ParserResult { _ -> }
+        fun <T> failure(): ParserResult<T> = ParserResult { _ -> }
     }
 }
 

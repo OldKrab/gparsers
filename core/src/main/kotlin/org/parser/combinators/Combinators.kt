@@ -1,11 +1,27 @@
 package org.parser.combinators
 
+import org.parser.sppf.SPPF
+import org.parser.sppf.node.NonPackedNode
 
 
 interface Combinators<E> {
-    infix fun <In, Out1, R1, Out2, R2> Parser<E, In, Out1, R1>.seq(other: Parser<E, Out1, Out2, R2>): Parser<E, In, Out2, Pair<R1, R2>> {
-        return Parser.make("seq") { env, input ->
-            this.parse(env, input).flatMap { s -> other.parse(env, s) }
+    fun <S> eps(): Parser<E, S, S, Unit> {
+        return Parser.memo("eps") { e, sppf, i ->
+            ParserResult.success(sppf.getEpsilonNode(i))
+        }
+    }
+
+    infix fun <In, Out1, R1, Out2, R2> Parser<E, In, Out1, R1>.seq(p2: Parser<E, Out1, Out2, R2>): Parser<E, In, Out2, Pair<R1, R2>> {
+        val p1 = this
+        val name = "${p1.name} ${p2.name}"
+        return fix(name) { q ->
+            Parser.memo(name) { e, sppf, i ->
+                p1.parse(e, sppf, i)
+                    .flatMap { t1 ->
+                        p2.parse(e, sppf, t1.rightState)
+                            .map { t2 -> sppf.getIntermediateNode(q, t1, t2) }
+                    }
+            }
         }
     }
 
@@ -17,39 +33,54 @@ interface Combinators<E> {
         return this seq other using { (_, r) -> r }
     }
 
-    infix fun <In, Out, R> Parser<E, In, Out, R>.or(other: Parser<E, In, Out, R>): Parser<E, In, Out, R> {
-        return Parser.make("or") { env, input ->
-            this.parse(env, input).orElse { other.parse(env, input) }
+    private fun <In, Out, R> Parser<E, In, Out, R>.rule1(head: Parser<E, In, Out, R>): Parser<E, In, Out, R> {
+        val p = this
+        return Parser.memo(name) { e, sppf, inS ->
+            p.parse(e, sppf, inS).map { t -> sppf.getNonTerminalNode(head, t) }
         }
     }
 
-    fun <In, Out, R> rule(p: Parser<E, In, Out, R>, vararg parsers: Parser<E, In, Out, R>): Parser<E, In, Out, R> {
-        return Parser.make("rule") { env, input ->
-            parsers.fold(p.parse(env, input)) { acc, cur ->
-                acc.orElse { cur.parse(env, input) }
+    infix fun <In, Out, R> Parser<E, In, Out, R>.or(other: Parser<E, In, Out, R>): Parser<E, In, Out, R> {
+        return Parser.memo("${this.name} | ${other.name}") { env, sppf, input ->
+            this.parse(env, sppf, input).orElse { other.parse(env, sppf, input) }
+        }
+    }
+
+    fun <In, Out, R> rule(
+        p: Parser<E, In, Out, R>,
+        vararg parsers: Parser<E, In, Out, R>
+    ): Parser<E, In, Out, R> {
+        val name = "${p.name} ${parsers.joinToString { " | ${it.name}" }}"
+        return fix(name) { q ->
+            Parser.memo(name) { env, sppf, input ->
+                val firstRes = p.rule1(q).parse(env, sppf, input)
+                parsers.fold(firstRes) { acc, cur ->
+                    acc.orElse { cur.rule1(q).parse(env, sppf, input) }
+                }
             }
         }
+
     }
 
-    fun <In, Out, R> lookup(p: Parser<E, In, Out, R>): Parser<E, In, In, R> {
-        return Parser.make("lookup") { env, input ->
-            p.parse(env, input).map { _, r -> Pair(input, r) }
-        }
-    }
+//    fun <In, Out, R> lookup(p: Parser<E, In, Out, R>): Parser<E, In, In, R> {
+//        return Parser.make("lookup") { env, sppf, input ->
+//            p.parse(env, sppf, input).map { t -> t }
+//        }
+//    }
 
-    fun <In, Out, Out2, R, R2> Parser<E, In, Out, R>.that(constraint: Parser<E, Out, Out2, R2>): Parser<E, In, Out, R> {
-        return this seql lookup(constraint)
-    }
+//    fun <In, Out, Out2, R, R2> Parser<E, In, Out, R>.that(constraint: Parser<E, Out, Out2, R2>): Parser<E, In, Out, R> {
+//        return this seql lookup(constraint)
+//    }
 
-    fun <I, O, R> fix(f: (Parser<E, I, O, R>) -> Parser<E, I, O, R>): Parser<E, I, O, R> {
+    fun <I, O, R> fix(name: String, f: (Parser<E, I, O, R>) -> Parser<E, I, O, R>): Parser<E, I, O, R> {
         lateinit var p: Parser<E, I, O, R>
-        p = Parser.make("fix") { env, s -> f(p).parse(env, s) }
+        p = f(Parser.memo(name) { env, sppf, s -> p.parse(env, sppf, s) })
         return p
     }
 
     infix fun <In, Out, A, B> Parser<E, In, Out, A>.using(f: (A) -> B): Parser<E, In, Out, B> {
-        return Parser.make("using") { env, input ->
-            this.parse(env, input).map { p, r -> Pair(p, f(r)) }
+        return Parser.memo(this.name) { env, sppf, input ->
+            this.parse(env, sppf, input).map { t -> t.withAction(f) }
         }
     }
 
@@ -65,12 +96,19 @@ interface Combinators<E> {
         return this using { (r, a4) -> f(r.first.first, r.first.second, r.second, a4) }
     }
 
-    fun <S, R> success(v: R): Parser<E, S, S, R> = Parser.make("success") { _, s -> ParserResult { k -> k(s, v) } }
+    fun <S, R> success(v: R): Parser<E, S, S, R> =
+        Parser.memo("success") { _, sppf, s -> ParserResult { k -> k(sppf.getTerminalNode(s, s, v)) } }
 
-    fun <S, R> fail(): Parser<E, S, S, R> = Parser.make("fail") { _, _ -> ParserResult { _ -> } }
+    fun <S, R> fail(): Parser<E, S, S, R> = Parser.memo("fail") { _, _, _ -> ParserResult { _ -> } }
 
     val <S, R> Parser<E, S, S, R>.many: Parser<E, S, S, List<R>>
-        get() = fix { manyP ->
-            success<S, List<R>>(emptyList()) or ((this seq manyP) using { head, tail -> listOf(head) + tail })
+        get() {
+            val name = "(${this.name})*"
+            return fix(name) { manyP ->
+                val res =
+                    success<S, List<R>>(emptyList()) or ((this seq manyP) using { head, tail -> listOf(head) + tail })
+                res.name = name
+                res
+            }
         }
 }
