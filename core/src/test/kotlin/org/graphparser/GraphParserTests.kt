@@ -1,26 +1,15 @@
 package org.graphparser
 
 import org.graphparser.TestCombinators.edge
-import org.graphparser.TestCombinators.edgeEps
-import org.graphparser.TestCombinators.eps
-import org.graphparser.TestCombinators.fail
-import org.graphparser.TestCombinators.fix
-import org.graphparser.TestCombinators.many
-import org.graphparser.TestCombinators.or
 import org.graphparser.TestCombinators.outV
-import org.graphparser.TestCombinators.rule
-import org.graphparser.TestCombinators.seq
-import org.graphparser.TestCombinators.seqr
-import org.graphparser.TestCombinators.success
-import org.graphparser.TestCombinators.using
+
 import org.graphparser.TestCombinators.v
 import org.graphparser.TestCombinators.vertexEps
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.parser.combinators.applyParser
 import org.parser.combinators.graph.*
-import org.parser.sppf.Visualizer
-import java.nio.file.Path
-import kotlin.io.path.createDirectories
+import org.parser.combinators.*
 
 private data class SimpleVertex(val value: String) {
     override fun toString(): String {
@@ -53,33 +42,33 @@ private class SimpleGraph : Graph<SimpleVertex, SimpleEdge> {
 
     override fun getEdges(v: SimpleVertex): List<SimpleEdge>? = vertexesEdges[v]
     override fun getVertexes(): Set<SimpleVertex> = vertexes
-
-    override fun getEdgeVertexes(e: SimpleEdge): Pair<SimpleVertex, SimpleVertex>? =
-        edgeVertexes[e]
+    override fun getEdgeVertexes(e: SimpleEdge): Pair<SimpleVertex, SimpleVertex>? = edgeVertexes[e]
 }
 
 
-private object TestCombinators : GraphCombinators<SimpleGraph, SimpleVertex, SimpleEdge>
+private object TestCombinators : GraphCombinators<SimpleVertex, SimpleEdge>
 
-class GraphParserTests {
+class GraphParserTests : ParserTests() {
 
 
     @Test
     fun simpleNode() {
         val nA = SimpleVertex("A")
+        val nB = SimpleVertex("B")
+        val eC = SimpleEdge("C")
         val gr = SimpleGraph().apply {
             addVertex(nA)
-            val eB = SimpleEdge("B")
-            addEdge(nA, eB, nA)
+            addVertex(nB)
+            addEdge(nA, eC, nB)
         }
 
         val parser = v { it.value == "A" }
-        val results = gr.applyParser(parser)
-        val dir = Path.of(System.getProperty("java.io.tmpdir")).resolve("simpleNode").createDirectories()
-        for (i in results.indices) {
-            Visualizer().toDotFile(results[i], dir.resolve("$i.dot"))
-        }
-        println("Look images in '$dir'")
+        val nodes = gr.applyParser(parser)
+        saveDotsToFolder(nodes, "simpleNode")
+
+        assertEquals(1, nodes.size)
+        val results = nodes[0].getResults()
+        assertEquals(setOf(nA), results.toSet())
     }
 
     @Test
@@ -92,12 +81,12 @@ class GraphParserTests {
 
         val parser = v { it.value == "A" } seq edge { it.label == "B" }
 
-        val results = gr.applyParser(parser)
-        val dir = Path.of(System.getProperty("java.io.tmpdir")).resolve("simpleNodeAndEdge").createDirectories()
-        for (i in results.indices) {
-            Visualizer().toDotFile(results[i], dir.resolve("$i.dot"))
-        }
-        println("Look images in '$dir'")
+        val nodes = gr.applyParser(parser)
+        saveDotsToFolder(nodes, "simpleNodeAndEdge")
+
+        assertEquals(1, nodes.size)
+        val results = nodes[0].getResults()
+        assertEquals(setOf(Pair(nA, eB)), results.toSet())
     }
 
     @Test
@@ -116,23 +105,23 @@ class GraphParserTests {
 
         val parser = nodeA seq (edgeB or edgeC)
 
-        val results = gr.applyParser(parser)
-        val dir = Path.of(System.getProperty("java.io.tmpdir")).resolve("or").createDirectories()
-        for (i in results.indices) {
-            Visualizer().toDotFile(results[i], dir.resolve("$i.dot"))
-        }
-        println("Look images in '$dir'")
+        val nodes = gr.applyParser(parser)
+        saveDotsToFolder(nodes, "or")
+
+        val results = nodes.map { it.getResults().toList() }.onEach { assertEquals(1, it.size) }.map { it[0] }
+
+        assertEquals(setOf(Pair(nA, eB), Pair(nA, eC)), results.toSet())
     }
 
 
     @Test
     fun many() {
+        val vA = SimpleVertex("A")
+        val eB = SimpleEdge("B")
+        val eC = SimpleEdge("C")
         val gr = SimpleGraph().apply {
-            val nA = SimpleVertex("A")
-            val eB = SimpleEdge("B")
-            val eC = SimpleEdge("C")
-            addEdge(nA, eB, nA)
-            addEdge(nA, eC, nA)
+            addEdge(vA, eB, vA)
+            addEdge(vA, eC, vA)
         }
 
         val isA: (SimpleVertex) -> Boolean = { it.value == "A" }
@@ -140,14 +129,128 @@ class GraphParserTests {
         val edgeC = edge { it.label == "C" }
 
         val p = v(isA) seq ((edgeB or edgeC) seq outV(isA)).many
-        val results = gr.applyParser(p)
-        results.forEach { println(it) }
-        val dir = Path.of(System.getProperty("java.io.tmpdir")).resolve("many").createDirectories()
-        for (i in results.indices) {
-            Visualizer().toDotFile(results[i], dir.resolve("$i.dot"))
+        val nodes = gr.applyParser(p)
+        saveDotsToFolder(nodes, "many")
+
+        assertEquals(1, nodes.size)
+        val results = nodes[0].getResults().take(7).toSet()
+        val rests = results.onEach {
+            assertEquals(vA, it.first)
+        }.map {
+            it.second
         }
-        println("Look images in '$dir'")
+        assertEquals(
+            setOf(
+                listOf(),
+                listOf(Pair(eB, vA)),
+                listOf(Pair(eC, vA)),
+                listOf(Pair(eB, vA), Pair(eB, vA)),
+                listOf(Pair(eB, vA), Pair(eC, vA)),
+                listOf(Pair(eC, vA), Pair(eB, vA)),
+                listOf(Pair(eC, vA), Pair(eC, vA)),
+            ), rests.toSet()
+        )
     }
+
+    @Test
+    fun loopWithManyWithStartState() {
+        val vA = SimpleVertex("A")
+        val eB = SimpleEdge("B")
+        val gr = SimpleGraph().apply {
+            addEdge(vA, eB, vA)
+        }
+
+        val vertexA = outV { it.value == "A" }
+        val edgeB = edge { it.label == "B" }
+        vertexA.name = "vA" // for debug
+        edgeB.name = "eB"
+
+        val x = v { it.value == "A" } seq (edgeB seq vertexA).many
+        val nodes = gr.applyParser(x)
+        saveDotsToFolder(nodes, "loopWithManyWithStartState")
+
+        assertEquals(1, nodes.size)
+        val results = nodes[0].getResults().take(3).toSet()
+        val rests = results.onEach {
+            assertEquals(vA, it.first)
+        }.map { it.second }
+        assertEquals(
+            setOf(
+                listOf(),
+                listOf(Pair(eB, vA)),
+                listOf(Pair(eB, vA), Pair(eB, vA)),
+            ), rests.toSet()
+        )
+    }
+
+    @Test
+    fun example1() {
+        val p = v { it.value == "Dan" } seqr edge { it.label == "loves" } seqr outV()
+    }
+
+    @Test
+    fun loopWithFix() {
+        val vA = SimpleVertex("A")
+        val eB = SimpleEdge("B")
+        val gr = SimpleGraph().apply {
+            addEdge(vA, eB, vA)
+        }
+
+        val vertexA = outV { it.value == "A" }
+        val edgeB = edge { it.label == "B" }
+        vertexA.name = "vA" // for debug
+        edgeB.name = "eB"
+        val S =
+            fix("x") { S ->
+                rule(
+                    vertexEps() using { _ -> emptyList() },
+                    (edgeB seq vertexA seq S) using { e, v, s: List<Pair<SimpleEdge, SimpleVertex>> ->
+                        listOf(Pair(e, v)) + s
+                    },
+                )
+            }
+        val nodes = applyParser(S, VertexState(gr, SimpleVertex("A")))
+        saveDotsToFolder(nodes, "loopWithFix")
+
+        assertEquals(1, nodes.size)
+        val results = nodes[0].getResults().take(3).toSet()
+        assertEquals(
+            setOf(
+                listOf(),
+                listOf(Pair(eB, vA)),
+                listOf(Pair(eB, vA), Pair(eB, vA)),
+            ), results.toSet()
+        )
+    }
+
+    @Test
+    fun loopWithMany() {
+        val vA = SimpleVertex("A")
+        val eB = SimpleEdge("B")
+        val gr = SimpleGraph().apply {
+            addEdge(vA, eB, vA)
+        }
+
+        val vertexA = outV { it.value == "A" }
+        val edgeB = edge { it.label == "B" }
+        vertexA.name = "vA"
+        edgeB.name = "eB"
+        val S = (edgeB seq vertexA).many
+
+        val nodes = applyParser(S, VertexState(gr, SimpleVertex("A")))
+        saveDotsToFolder(nodes, "loopWithMany")
+
+        assertEquals(1, nodes.size)
+        val results = nodes[0].getResults().take(3).toSet()
+        assertEquals(
+            setOf(
+                listOf(),
+                listOf(Pair(eB, vA)),
+                listOf(Pair(eB, vA), Pair(eB, vA)),
+            ), results.toSet()
+        )
+    }
+
 
 //    @Test
 //    fun withThat() {
@@ -172,83 +275,5 @@ class GraphParserTests {
 //        val res = gr.applyParser(parser).toList()
 //        assertEquals(listOf(Pair(Pair(danV, friendE), lindaV)), res)
 //    }
-
-    @Test
-    fun test1() {
-        val p = v { it.value == "Dan" } seqr edge { it.label == "loves" } seqr outV()
-    }
-
-    @Test
-    fun loop() {
-        val gr = SimpleGraph().apply {
-            val nA = SimpleVertex("A")
-            val eB = SimpleEdge("B")
-            addEdge(nA, eB, nA)
-        }
-
-        val vA = outV { it.value == "A" }
-        vA.name = "vA"
-        val edgeB = edge { it.label == "B" }
-        edgeB.name = "eB"
-        val x =
-            fix("x") { x ->
-
-                rule(
-                    (edgeB seq vA seq x) using { _ -> },
-                    vertexEps()
-                )
-            }
-        val results = applyParser(gr, x, VertexState(SimpleVertex("A")))
-        results.forEach { println(it) }
-        val dir = Path.of(System.getProperty("java.io.tmpdir")).resolve("loop").createDirectories()
-        for (i in results.indices) {
-            Visualizer().toDotFile(results[i], dir.resolve("$i.dot"))
-        }
-        println("Look images in '$dir'")
-    }
-
-    @Test
-    fun loopWithMany() {
-        val gr = SimpleGraph().apply {
-            val nA = SimpleVertex("A")
-            val eB = SimpleEdge("B")
-            addEdge(nA, eB, nA)
-        }
-
-        val vA = outV { it.value == "A" }
-        vA.name = "vA"
-        val edgeB = edge { it.label == "B" }
-        edgeB.name = "eB"
-        val x = (edgeB seq vA).many
-        val results = applyParser(gr, x, VertexState(SimpleVertex("A")))
-        results.forEach { println(it) }
-        val dir = Path.of(System.getProperty("java.io.tmpdir")).resolve("loopWithMany").createDirectories()
-        for (i in results.indices) {
-            Visualizer().toDotFile(results[i], dir.resolve("$i.dot"))
-        }
-        println("Look images in '$dir'")
-    }
-
-    @Test
-    fun loopWithManyWithStartState() {
-        val gr = SimpleGraph().apply {
-            val nA = SimpleVertex("A")
-            val eB = SimpleEdge("B")
-            addEdge(nA, eB, nA)
-        }
-
-        val vA = outV { it.value == "A" }
-        vA.name = "vA"
-        val edgeB = edge { it.label == "B" }
-        edgeB.name = "eB"
-        val x = v { it.value == "A" } seq (edgeB seq vA).many
-        val results = gr.applyParser(x)
-        results.forEach { println(it) }
-        val dir = Path.of(System.getProperty("java.io.tmpdir")).resolve("loopWithManyWithStartState").createDirectories()
-        for (i in results.indices) {
-            Visualizer().toDotFile(results[i], dir.resolve("$i.dot"))
-        }
-        println("Look images in '$dir'")
-    }
 
 }

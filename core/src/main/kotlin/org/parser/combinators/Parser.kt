@@ -2,30 +2,32 @@ package org.parser.combinators
 
 import org.parser.sppf.SPPF
 import org.parser.sppf.node.NonPackedNode
+import java.nio.file.Path
 
 interface BaseParser
-class Parser<E, InS, OutS, R> private constructor(
-    var inner: (E, SPPF<E>, InS) -> ParserResult<NonPackedNode<InS, OutS, R>>,
+class Parser<InS, OutS, R> private constructor(
+    var inner: (SPPF, InS) -> ParserResult<NonPackedNode<InS, OutS, R>>,
     var name: String
 ) : BaseParser {
-    fun parse(env: E, sppf: SPPF<E>, input: InS): ParserResult<NonPackedNode<InS, OutS, R>> =
-        inner(env, sppf, input)
+    fun parse(sppf: SPPF, input: InS): ParserResult<NonPackedNode<InS, OutS, R>> =
+        inner(sppf, input)
 
     override fun toString(): String {
         return name
     }
 
+
     companion object {
-        fun <E, InS, OutS, R> make(name: String, inner: (E, SPPF<E>, InS) -> ParserResult<NonPackedNode<InS, OutS, R>>): Parser<E, InS, OutS, R> {
+        fun <InS, OutS, R> make(name: String, inner: (SPPF, InS) -> ParserResult<NonPackedNode<InS, OutS, R>>): Parser<InS, OutS, R> {
         return Parser(
-            { env, sppf, inS ->  inner(env, sppf, inS)  },
+            {sppf, inS ->  inner(sppf, inS)  },
             name
         )
         }
-        fun <E, InS, OutS, R> memo(name: String, inner: (E, SPPF<E>, InS) -> ParserResult<NonPackedNode<InS, OutS, R>>): Parser<E, InS, OutS, R> {
-            val table = HashMap<Pair<E, InS>, ParserResult<NonPackedNode<InS, OutS, R>>>()
-            val res: Parser<E, InS, OutS, R> = Parser(
-                { env, sppf, inS -> table.computeIfAbsent(Pair(env, inS)) { memoResult(name) { inner(env, sppf, inS) } } },
+        fun <InS, OutS, R> memo(name: String, inner: (SPPF, InS) -> ParserResult<NonPackedNode<InS, OutS, R>>): Parser<InS, OutS, R> {
+            val table = HashMap<InS, ParserResult<NonPackedNode<InS, OutS, R>>>()
+            val res: Parser<InS, OutS, R> = Parser(
+                { sppf, inS -> table.computeIfAbsent(inS) { memoResult(name) { inner(sppf, inS) } } },
                 name
             )
             return res
@@ -59,11 +61,12 @@ class Parser<E, InS, OutS, R> private constructor(
     }
 }
 
-fun <E, I, O, R> applyParser(env: E, parser: Parser<E, I, O, R>, inState: I, count: Int = -1): List<NonPackedNode<I, O, R>> {
-    val sppf = SPPF<E>()
-    val res = parser.parse(env, sppf, inState)
+fun <I, O, R> applyParser(parser: Parser<I, O, R>, inState: I, count: Int = -1): List<NonPackedNode<I, O, R>> {
+    val sppf = SPPF()
+    val res = parser.parse(sppf, inState)
     val trees = ArrayList<NonPackedNode<I, O, R>>()
     res.invoke { t -> trees.add(t) }
+    sppf.convertAllToDot(Path.of("/tmp/boob.dot"))
     return trees
 }
 

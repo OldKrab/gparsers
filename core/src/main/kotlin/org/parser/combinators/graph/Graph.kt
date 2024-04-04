@@ -11,23 +11,24 @@ interface Graph<V, E> {
     fun getEdgeVertexes(e: E): Pair<V, V>?
 }
 
-fun <V, E, G : Graph<V, E>, Out, R> G.applyParser(parser: Parser<G, StartState, Out, R>, count: Int = -1): List<NonPackedNode<StartState, Out, R>> {
-    return applyParser(this, parser, StartState(), count)
+fun <V, E, G : Graph<V, E>, O, R> G.applyParser(parser: Parser<StartState<V, E>, O, R>, count: Int = -1): List<NonPackedNode<StartState<V, E>, O, R>> {
+    return applyParser(parser, StartState(this), count)
 }
 
 
 
-class StartState {
+data class StartState<V, E>(val gr: Graph<V, E>) {
     override fun toString(): String {
         return "StartState"
     }
 }
-data class VertexState<V>(val v: V){
+data class VertexState<V, E>(val gr: Graph<V, E>, val v: V){
     override fun toString(): String {
         return "VState($v)"
     }
 }
-data class EdgeState<E>(val edge: E) {
+data class EdgeState<V, E>(val gr: Graph<V, E>, val edge: E) {
+
     override fun toString(): String {
         return "EState($edge)"
     }
