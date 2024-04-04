@@ -1,7 +1,7 @@
 package org.graphparser
 
 import org.parser.sppf.Visualizer
-import org.parser.sppf.node.Node
+import org.parser.sppf.Node
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
 

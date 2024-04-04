@@ -1,7 +1,7 @@
 package org.parser.combinators
 
 import org.parser.sppf.SPPF
-import org.parser.sppf.node.NonPackedNode
+import org.parser.sppf.NonPackedNode
 import java.nio.file.Path
 
 interface BaseParser
@@ -18,31 +18,24 @@ class Parser<InS, OutS, R> private constructor(
 
 
     companion object {
-        fun <InS, OutS, R> make(name: String, inner: (SPPF, InS) -> ParserResult<NonPackedNode<InS, OutS, R>>): Parser<InS, OutS, R> {
-        return Parser(
-            {sppf, inS ->  inner(sppf, inS)  },
-            name
-        )
-        }
+
         fun <InS, OutS, R> memo(name: String, inner: (SPPF, InS) -> ParserResult<NonPackedNode<InS, OutS, R>>): Parser<InS, OutS, R> {
             val table = HashMap<InS, ParserResult<NonPackedNode<InS, OutS, R>>>()
             val res: Parser<InS, OutS, R> = Parser(
-                { sppf, inS -> table.computeIfAbsent(inS) { memoResult(name) { inner(sppf, inS) } } },
+                { sppf, inS -> table.computeIfAbsent(inS) { memoResult { inner(sppf, inS) } } },
                 name
             )
             return res
         }
 
-        private fun <T> memoResult(name: String, res: () -> ParserResult<T>): ParserResult<T> {
+        private fun <T> memoResult(res: () -> ParserResult<T>): ParserResult<T> {
             val results = ArrayList<T>()
             val continuations = ArrayList<Continuation<T>>()
             return ParserResult { k ->
-                val name = name
                 if (continuations.isEmpty()) {
                     continuations.add(k)
                     val p = res()
                     p.invoke { t ->
-                        val p = p
                         if (!results.contains(t)) {
                             results.add(t)
                             for (continuation in continuations) {
@@ -61,11 +54,10 @@ class Parser<InS, OutS, R> private constructor(
     }
 }
 
-fun <I, O, R> applyParser(parser: Parser<I, O, R>, inState: I, count: Int = -1): List<NonPackedNode<I, O, R>> {
+fun <I, O, R> applyParser(parser: Parser<I, O, R>, inState: I): List<NonPackedNode<I, O, R>> {
     val sppf = SPPF()
     val res = parser.parse(sppf, inState)
-    val trees = ArrayList<NonPackedNode<I, O, R>>()
-    res.invoke { t -> trees.add(t) }
+    val trees = res.getResults()
     sppf.convertAllToDot(Path.of("/tmp/boob.dot"))
     return trees
 }

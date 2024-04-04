@@ -185,7 +185,7 @@ class GraphParserTests : ParserTests() {
 
     @Test
     fun example1() {
-        val p = v { it.value == "Dan" } seqr edge { it.label == "loves" } seqr outV()
+        v { it.value == "Dan" } seqr edge { it.label == "loves" } seqr outV()
     }
 
     @Test
@@ -200,16 +200,16 @@ class GraphParserTests : ParserTests() {
         val edgeB = edge { it.label == "B" }
         vertexA.name = "vA" // for debug
         edgeB.name = "eB"
-        val S =
-            fix("x") { S ->
+        val s =
+            fix("x") { s ->
                 rule(
                     vertexEps() using { _ -> emptyList() },
-                    (edgeB seq vertexA seq S) using { e, v, s: List<Pair<SimpleEdge, SimpleVertex>> ->
-                        listOf(Pair(e, v)) + s
+                    (edgeB seq vertexA seq s) using { e, v, rest: List<Pair<SimpleEdge, SimpleVertex>> ->
+                        listOf(Pair(e, v)) + rest
                     },
                 )
             }
-        val nodes = applyParser(S, VertexState(gr, SimpleVertex("A")))
+        val nodes = applyParser(s, VertexState(gr, SimpleVertex("A")))
         saveDotsToFolder(nodes, "loopWithFix")
 
         assertEquals(1, nodes.size)
@@ -235,9 +235,9 @@ class GraphParserTests : ParserTests() {
         val edgeB = edge { it.label == "B" }
         vertexA.name = "vA"
         edgeB.name = "eB"
-        val S = (edgeB seq vertexA).many
+        val s = (edgeB seq vertexA).many
 
-        val nodes = applyParser(S, VertexState(gr, SimpleVertex("A")))
+        val nodes = applyParser(s, VertexState(gr, SimpleVertex("A")))
         saveDotsToFolder(nodes, "loopWithMany")
 
         assertEquals(1, nodes.size)

@@ -2,7 +2,7 @@ package org.parser.combinators.graph
 
 import org.parser.combinators.Parser
 import org.parser.combinators.applyParser
-import org.parser.sppf.node.NonPackedNode
+import org.parser.sppf.NonPackedNode
 
 
 interface Graph<V, E> {
@@ -11,8 +11,8 @@ interface Graph<V, E> {
     fun getEdgeVertexes(e: E): Pair<V, V>?
 }
 
-fun <V, E, G : Graph<V, E>, O, R> G.applyParser(parser: Parser<StartState<V, E>, O, R>, count: Int = -1): List<NonPackedNode<StartState<V, E>, O, R>> {
-    return applyParser(parser, StartState(this), count)
+fun <V, E, G : Graph<V, E>, O, R> G.applyParser(parser: Parser<StartState<V, E>, O, R>): List<NonPackedNode<StartState<V, E>, O, R>> {
+    return applyParser(parser, StartState(this))
 }
 
 

@@ -1,7 +1,5 @@
 package org.parser.combinators
 
-import org.parser.sppf.SPPF
-import org.parser.sppf.node.NonPackedNode
 
 fun <S> eps(): Parser<S, S, Unit> {
     return Parser.memo("eps") { sppf, i ->
@@ -87,6 +85,7 @@ infix fun <In, Out, A, B> Parser<In, Out, A>.using(f: (A) -> B): Parser<In, Out,
     }
 }
 
+//TODO we should generate next using functions
 infix fun <In, Out, A1, A2, B> Parser<In, Out, Pair<A1, A2>>.using(f: (A1, A2) -> B): Parser<In, Out, B> {
     return this using { r -> f(r.first, r.second) }
 }

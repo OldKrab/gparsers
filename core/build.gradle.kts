@@ -11,7 +11,6 @@ repositories {
 
 dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-test")
-    implementation("guru.nidi:graphviz-java:0.18.1")
 }
 
 tasks.test {

@@ -1,7 +1,5 @@
 package org.parser.sppf
 
-import guru.nidi.graphviz.model.Factory.mutGraph
-import org.parser.sppf.node.*
 import java.nio.file.Path
 
 class Visualizer {
@@ -73,7 +71,6 @@ class Visualizer {
     fun visit(node: Node) {
         if (node in visitedNodes) return
         visitedNodes.add(node)
-        val g = mutGraph("example1").setDirected(true)
         when (node) {
             is IntermediateNode<*, *, *, *, *> -> {
                 addNode(node)

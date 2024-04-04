@@ -1,7 +1,6 @@
-package org.parser.sppf.node
+package org.parser.sppf
 
 import org.parser.combinators.BaseParser
-import org.parser.sppf.SPPF
 import java.util.*
 import kotlin.collections.ArrayList
 
@@ -107,7 +106,7 @@ class NonTerminalNode<LS, RS, R, CR1, CR2>(
 open class TerminalNode<LS, RS, R, R2>(
     leftState: LS,
     rightState: RS,
-    val result: R,
+    private val result: R,
     val action: (R) -> R2
 ) : NonPackedNode<LS, RS, R2>(leftState, rightState) {
     override fun <R3> withAction(f: (R2) -> R3): NonPackedNode<LS, RS, R3> {

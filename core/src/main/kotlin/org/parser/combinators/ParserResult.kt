@@ -11,6 +11,7 @@ value class ParserResult<T>(val invoke: (Continuation<T>) -> Unit) {
         }
         return results
     }
+
     fun <T2> map(transform: (T) -> T2): ParserResult<T2> {
         return ParserResult { k ->
             val k2: Continuation<T> = { t ->

@@ -14,27 +14,27 @@ class StringParserTests :ParserTests() {
 
     @Test
     fun simple() {
-        val S = "a".p
+        val s = "a".p
         val str = "a"
-        val results = str.applyParser(S).filter { it.rightState.pos == str.length }
+        val results = str.applyParser(s).filter { it.rightState.pos == str.length }
         assertEquals(1, results.size)
         assertEquals(setOf("a"), results[0].getResults().toSet())
     }
 
     @Test
     fun sameTerminalParserWithDifferentAction() {
-        val S = "a".p using { _ -> 42 } or ("a".p using {_ -> 24})
+        val s = "a".p using { _ -> 42 } or ("a".p using { _ -> 24})
         val str = "a"
-        val nodes = str.applyParser(S)
+        val nodes = str.applyParser(s)
         assertEquals(1, nodes.size)
         assertEquals(setOf(42, 24), nodes[0].getResults().toSet())
     }
 
     @Test
     fun sameEpsilonParserWithDifferentAction() {
-        val S = eps<StringPos>() using { _ -> 42 } or (eps<StringPos>() using { _ -> 24})
+        val s = eps<StringPos>() using { _ -> 42 } or (eps<StringPos>() using { _ -> 24})
         val str = "a"
-        val nodes = str.applyParser(S)
+        val nodes = str.applyParser(s)
         assertEquals(1, nodes.size)
         assertEquals(setOf(42, 24), nodes[0].getResults().toSet())
     }
@@ -43,11 +43,11 @@ class StringParserTests :ParserTests() {
     fun simpleAmbiguous() {
         val str = "aa"
 
-        val S: StringParser<String> = rule(
+        val s: StringParser<String> = rule(
             ("a".p seq "a".p) using { _, _ -> "[a][a]" },
             "aa".p using { "[aa]" }
         )
-        val nodes = str.applyParser(S)
+        val nodes = str.applyParser(s)
         saveDotsToFolder(nodes, "simpleAmbiguous")
 
         val results = nodes.map { it.getResults() }
@@ -59,11 +59,11 @@ class StringParserTests :ParserTests() {
     fun ambiguousWithFix() {
         val str = "aaaaaa"
         val a = "a".p
-        val S: StringParser<String> = fix("S") { S ->
-            (a seqr S seql a).many using { s -> s.joinToString("") { "[a${it}a]" } }
+        val s: StringParser<String> = fix("S") { s ->
+            (a seqr s seql a).many using { res -> res.joinToString("") { "[a${it}a]" } }
         }
 
-        val nodes = str.applyParser(S)
+        val nodes = str.applyParser(s)
         saveDotsToFolder(nodes, "ambiguous")
 
         val results = nodes.filter { it.rightState.pos == str.length }.map { it.getResults() }
@@ -76,15 +76,15 @@ class StringParserTests :ParserTests() {
 
     @Test
     fun ambiguousWithRule() {
-        val S: StringParser<String> = fix("S") { S ->
+        val s: StringParser<String> = fix("S") { s ->
             rule(
-                ("a".p seqr S seql "a".p seq S) using { s1, s2 -> "[a${s1}a]$s2" },
+                ("a".p seqr s seql "a".p seq s) using { s1, s2 -> "[a${s1}a]$s2" },
                 "".p
             )
         }
 
         val str = "aaaa"
-        val nodes = str.applyParser(S)
+        val nodes = str.applyParser(s)
         saveDotsToFolder(nodes, "ambiguous2")
         val results = nodes.filter { it.rightState.pos == str.length }.map { it.getResults() }
         assertEquals(1, results.size)
@@ -93,15 +93,15 @@ class StringParserTests :ParserTests() {
 
     @Test
     fun brackets() {
-        val S: StringParser<String> = fix("S") { S ->
+        val s: StringParser<String> = fix("S") { s ->
             rule(
-                ("[".p seqr S seql "]".p seq S) using { s1, s2 -> "[$s1]$s2" },
+                ("[".p seqr s seql "]".p seq s) using { s1, s2 -> "[$s1]$s2" },
                 "".p
             )
         }
 
         val str = "[][[]][[][]]"
-        val nodes = str.applyParser(S)
+        val nodes = str.applyParser(s)
         saveDotsToFolder(nodes, "brackets")
         val results = nodes.filter { it.rightState.pos == str.length }.map { it.getResults() }
         assertEquals(1, results.size)
@@ -111,15 +111,15 @@ class StringParserTests :ParserTests() {
     @Test
     fun leftRec() {
         val a = "a".p
-        val S = fix("S") { S ->
+        val s = fix("S") { s ->
             rule(
-                S seq a using { a, b -> "$a$b" },
+                s seq a using { a, b -> "$a$b" },
                 a
             )
         }
 
         val str = "aaaa"
-        val nodes = str.applyParser(S)
+        val nodes = str.applyParser(s)
 
         saveDotsToFolder(nodes, "leftRec")
         val results = nodes.map { it.getResults().toList() }.onEach { assertEquals(1, it.size) }.map { it[0] }

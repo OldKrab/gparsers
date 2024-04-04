@@ -3,7 +3,7 @@ package org.parser.combinators.string
 import org.parser.combinators.Parser
 import org.parser.combinators.ParserResult
 import org.parser.combinators.applyParser
-import org.parser.sppf.node.NonPackedNode
+import org.parser.sppf.NonPackedNode
 
 typealias StringParser<R> = Parser<StringPos, StringPos, R>
 
@@ -14,8 +14,8 @@ data class StringPos(val str: String, val pos: Int) {
     }
 }
 
-fun <R> String.applyParser(parser: StringParser<R>, count: Int = -1): List<NonPackedNode<StringPos, StringPos, R>> {
-    return applyParser(parser, StringPos(this, 0), count)
+fun <R> String.applyParser(parser: StringParser<R>): List<NonPackedNode<StringPos, StringPos, R>> {
+    return applyParser(parser, StringPos(this, 0))
 }
 
 val String.p: StringParser<String>

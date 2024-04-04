@@ -1,7 +1,6 @@
 package org.parser.sppf
 
 import org.parser.combinators.Parser
-import org.parser.sppf.node.*
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -20,7 +19,6 @@ class SPPF {
         Files.writeString(path, visitor.toString())
     }
 
-    fun <T> getIdAction(): (T) -> T = { it }
 
     fun <LS, RS, R, R2> withAction(node: NonPackedNode<LS, RS, R>, action: (R) -> R2): NonPackedNode<LS, RS, R2> {
         val newNode = node.withAction(action)
@@ -28,6 +26,8 @@ class SPPF {
         nodes[key] = newNode
         return newNode
     }
+
+    private fun <T> getIdAction(): (T) -> T = { it }
 
     @Suppress("UNCHECKED_CAST")
     fun <LS, RS, R> getTerminalNode(leftState: LS, rightState: RS, result: R): NonPackedNode<LS, RS, R> {
