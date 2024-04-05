@@ -45,7 +45,7 @@ class SPPFStorage {
     ): NonPackedNode<LS, RS, Pair<R1, R2>> {
         val leftState = leftChild.leftState
         val rightState = rightChild.rightState
-        val newNode = IntermediateNode(parser, leftState, rightState, getIdAction())
+        val newNode = IntermediateNode(parser, leftState, rightState, getIdAction<Pair<R1?, R2>>())
         val key = NodeHash(newNode.nodeHashCode())
 
         val res = nodes.computeIfAbsent(key) { newNode } as IntermediateNode<LS, RS, Pair<R1, R2>, R1, R2>
@@ -53,15 +53,31 @@ class SPPFStorage {
         return res
     }
 
+    @Suppress("UNCHECKED_CAST")
+    fun <LS, RS, R> getIntermediateNode(
+        parser: Parser<LS, RS, R>,
+        child: NonPackedNode<LS, RS, R>
+    ): NonPackedNode<LS, RS, R> {
+        val leftState = child.leftState
+        val rightState = child.rightState
+        val newNode = IntermediateNode(parser, leftState, rightState) { r: Pair<Nothing?, R> -> r.second }
+        val key = NodeHash(newNode.nodeHashCode())
+
+        val res = nodes.computeIfAbsent(key) { newNode } as IntermediateNode<LS, RS, R, Nothing, R>
+        res.packedNodes.add(PackedNode(null, child))
+        return res
+    }
+
 
     @Suppress("UNCHECKED_CAST")
     fun <LS, RS, R> getNonTerminalNode(
+        nt: String,
         parser: Parser<LS, RS, R>,
         child: NonPackedNode<LS, RS, R>,
     ): NonPackedNode<LS, RS, R> {
         val leftState = child.leftState
         val rightState = child.rightState
-        val newNode = NonTerminalNode(parser, leftState, rightState, getIdAction())
+        val newNode = NonTerminalNode(nt, parser, leftState, rightState, getIdAction())
         val key = NodeHash(newNode.nodeHashCode())
 
         val res = nodes.computeIfAbsent(key) { newNode } as NonTerminalNode<LS, RS, R, R>

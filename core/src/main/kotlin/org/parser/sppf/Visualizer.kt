@@ -7,7 +7,7 @@ class Visualizer {
 
     private val visitedNodes = HashSet<Node>()
     fun begin() {
-        sb.append("digraph {\nordering=\"out\"\n")
+        sb.append("digraph {\n")
     }
 
     fun end() {
@@ -75,9 +75,10 @@ class Visualizer {
         shape: String,
         height: Double = 0.5,
         width: Double = 0.75,
-        style: String = "\"\""
+        style: String = "\"\"",
+        ordering: String = "\"\""
     ) {
-        sb.append("$id [label=$label, shape=$shape, style=$style, width=$width, height=$height]")
+        sb.append("$id [label=$label, shape=$shape, style=$style, width=$width, height=$height, ordering=$ordering]")
         sb.append("\n")
     }
 
@@ -92,7 +93,7 @@ class Visualizer {
 
             is IntermediateNode<*, *, *, *, *> -> addNode(getNodeId(node), getNodeId(node), "box", style = "rounded")
             is TerminalNode<*, *, *, *>, is EpsilonNode<*, *> -> addNode(getNodeId(node), getNodeId(node), "box")
-            is PackedNode<*, *, *, *, *> -> addNode(getNodeId(node), "\"\"", "box", width = 0.2, height = 0.2)
+            is PackedNode<*, *, *, *, *> -> addNode(getNodeId(node), "\"\"", "box", width = 0.2, height = 0.2, ordering = "\"out\"")
         }
     }
 

@@ -35,7 +35,7 @@ private class SimpleGraph : Graph<SimpleVertex, SimpleEdge> {
     fun addEdge(u: SimpleVertex, e: SimpleEdge, v: SimpleVertex) {
         addVertex(u)
         addVertex(v)
-        vertexesEdges.getOrPut(v) { ArrayList() }.add(e)
+        vertexesEdges.getOrPut(u) { ArrayList() }.add(e)
         edgeVertexes[e] = Pair(u, v)
     }
 
@@ -121,10 +121,12 @@ class GraphParserTests : ParserTests() {
         }
 
         val isA: (SimpleVertex) -> Boolean = { it.value == "A" }
-        val edgeB = edge { it.label == "B" }
-        val edgeC = edge { it.label == "C" }
+        val edgeB by edge { it.label == "B" }
+        val edgeC by edge { it.label == "C" }
+        val vertexA by outV(isA)
+        val startVertexA by v(isA)
 
-        val p = v(isA) seq ((edgeB or edgeC) seq outV(isA)).many
+        val p by startVertexA seq ((edgeB or edgeC) seq vertexA).many
         val nodes = gr.applyParser(p)
         saveDotsToFolder(nodes, "many")
 
@@ -181,7 +183,18 @@ class GraphParserTests : ParserTests() {
 
     @Test
     fun example1() {
-        v { it.value == "Dan" } seqr edge { it.label == "loves" } seqr outV()
+        val dan = SimpleVertex("Dan")
+        val mary = SimpleVertex("Mary")
+        val john = SimpleVertex("John")
+        val gr = SimpleGraph().apply {
+            addEdge(dan, SimpleEdge("loves"), mary)
+            addEdge(dan, SimpleEdge("friend"), john)
+        }
+        val p = v { it.value == "Dan" } seqr edge { it.label == "loves" } seqr outV()
+        val nodes = gr.applyParser(p)
+        saveDotsToFolder(nodes, "example1")
+        assertEquals(1, nodes.size)
+        assertEquals(setOf(mary), nodes[0].getResults().toSet())
     }
 
     @Test
@@ -227,11 +240,11 @@ class GraphParserTests : ParserTests() {
             addEdge(vA, eB, vA)
         }
 
-        val vertexA = outV { it.value == "A" }
-        val edgeB = edge { it.label == "B" }
+        val vertexA by outV { it.value == "A" }
+        val edgeB by edge { it.label == "B" }
         vertexA.view = "vA"
         edgeB.view = "eB"
-        val s = (edgeB seq vertexA).many
+        val s by (edgeB seq vertexA).many
 
         val nodes = s.parseState(VertexState(gr, SimpleVertex("A")))
         saveDotsToFolder(nodes, "loopWithMany")

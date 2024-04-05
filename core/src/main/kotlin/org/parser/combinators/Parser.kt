@@ -28,6 +28,15 @@ class Parser<InS, OutS, R> private constructor(
         return trees
     }
 
+    operator fun getValue(r: Any?, property: KProperty<*>): Parser<InS, OutS, R> {
+        val name = property.name
+        return fix(name) { q ->
+            Parser.memo(name) { sppf, inS ->
+                this.parse(sppf, inS).map { t -> sppf.getNonTerminalNode(name, q, t) }
+            }
+        }
+    }
+
     companion object {
         /** Returns parser which results will be memoized for any input state. */
         internal fun <InS, OutS, R> memo(name: String, inner: (SPPFStorage, InS) -> ParserResult<NonPackedNode<InS, OutS, R>>): Parser<InS, OutS, R> {

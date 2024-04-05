@@ -7,7 +7,7 @@ import kotlin.collections.ArrayList
 sealed interface Node
 
 
-sealed interface NodeWithResults<R> {
+sealed interface NodeWithResults<out R>: Node {
     fun getResults(): Sequence<R>
 }
 
@@ -27,26 +27,32 @@ sealed class NodeWithHashCode : Node {
 }
 
 
-class PackedNode<LS, MS, RS, R1, R2>(
+class PackedNode<LS, MS, RS, out R1, out R2>(
     val leftNode: NonPackedNode<LS, MS, R1>?,
     val rightNode: NonPackedNode<MS, RS, R2>
-) : Node
+) : NodeWithResults<Pair<R1?, R2>> {
+    override fun getResults(): Sequence<Pair<R1?, R2>> {
+        val rightResults = rightNode.getResults()
+        val leftResults = leftNode?.getResults() ?: return rightResults.map { r -> Pair(null, r) }
+        return rightResults.flatMap { r -> leftResults.map { l -> Pair(l, r) } }
+    }
+}
 
 
-sealed class NonPackedNode<LS, RS, R>(val leftState: LS, val rightState: RS) : NodeWithHashCode(), NodeWithResults<R> {
+sealed class NonPackedNode<LS, RS, out R>(val leftState: LS, val rightState: RS) : NodeWithHashCode(), NodeWithResults<R> {
     /** Returns new node where results are mapped with [f] function. */
     abstract fun <R2> withAction(f: (R) -> R2): NonPackedNode<LS, RS, R2>
 }
 
 
 open class IntermediateNode<LS, RS, R, CR1, CR2>(
-    val parser: Parser<LS, RS, Pair<CR1, CR2>>,
+    val parser: Parser<LS, RS, *>,
     leftState: LS,
     rightState: RS,
-    val action: (Pair<CR1, CR2>) -> R
+    val action: (Pair<CR1?, CR2>) -> R
 ) : NonPackedNode<LS, RS, R>(leftState, rightState) {
 
-    val packedNodes: MutableList<PackedNode<LS, *, RS, CR1, CR2>> = ArrayList()
+    val packedNodes: MutableList<PackedNode<LS, *, RS, CR1?, CR2>> = ArrayList()
 
     override fun <R2> withAction(f: (R) -> R2): NonPackedNode<LS, RS, R2> {
         val res = IntermediateNode(parser, leftState, rightState) { f(action(it)) }
@@ -63,16 +69,13 @@ open class IntermediateNode<LS, RS, R, CR1, CR2>(
     }
 
     override fun getResults(): Sequence<R> {
-        return packedNodes.asSequence().flatMap { pn ->
-            val rightResults = pn.rightNode.getResults()
-            val leftResults = pn.leftNode!!.getResults()
-            rightResults.flatMap { r -> leftResults.map { l -> action(Pair(l, r)) } }
-        }
+        return packedNodes.asSequence().flatMap { it.getResults() }.map { action(it) }
     }
 }
 
 
 class NonTerminalNode<LS, RS, R, CR>(
+    val nt: String,
     val parser: Parser<LS, RS, CR>,
     leftState: LS,
     rightState: RS,
@@ -82,7 +85,7 @@ class NonTerminalNode<LS, RS, R, CR>(
     val packedNodes: MutableList<PackedNode<LS, *, RS, Nothing, CR>> = ArrayList()
 
     override fun <R2> withAction(f: (R) -> R2): NonPackedNode<LS, RS, R2> {
-        val res = NonTerminalNode(parser, leftState, rightState) { f(action(it)) }
+        val res = NonTerminalNode(nt, parser, leftState, rightState) { f(action(it)) }
         res.packedNodes.addAll(packedNodes)
         return res
     }
@@ -92,14 +95,11 @@ class NonTerminalNode<LS, RS, R, CR>(
     }
 
     override fun toString(): String {
-        return "NT -> $parser, $leftState, $rightState"
+        return "$nt, $leftState, $rightState"
     }
 
     override fun getResults(): Sequence<R> {
-        return packedNodes.asSequence().flatMap { pn ->
-            val rightResults = pn.rightNode.getResults()
-            rightResults.map { action(it) }
-        }
+        return packedNodes.asSequence().flatMap { it.getResults() }.map { action(it.second) }
     }
 }
 

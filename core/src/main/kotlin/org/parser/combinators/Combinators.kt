@@ -32,7 +32,7 @@ infix fun <In, Out1, R1, Out2, R2> Parser<In, Out1, R1>.seqr(p2: Parser<Out1, Ou
 private fun <In, Out, R> Parser<In, Out, R>.rule1(head: Parser<In, Out, R>): Parser<In, Out, R> {
     val p = this
     return Parser.memo(view) { sppf, inS ->
-        p.parse(sppf, inS).map { t -> sppf.getNonTerminalNode(head, t) }
+        p.parse(sppf, inS).map { t -> sppf.getIntermediateNode(head, t) }
     }
 }
 
@@ -78,10 +78,11 @@ fun <In, Out, R> rule(
 /** Returns parser that [f] returns. Same parser will be passed as argument of [f]. You can use it to define parser that uses itself.
  * @sample org.parser.samples.fixExample */
 fun <I, O, R> fix(name: String = "fix", f: (Parser<I, O, R>) -> Parser<I, O, R>): Parser<I, O, R> {
+    //TODO if q get name after fix, then f will use previous name of q
     lateinit var p: Parser<I, O, R>
     val q: Parser<I, O, R> = Parser.memo(name) { sppf, s -> p.parse(sppf, s) }
     p = f(q)
-    return p
+    return q
 }
 
 /** Returns same parser where result of this parser will be replaced with [f]. */
@@ -113,7 +114,7 @@ fun <S> eps(): Parser<S, S, Unit> {
 
 /** Returns parser that not change state and returns [v]. */
 fun <S, R> success(v: R): Parser<S, S, R> {
-    return Parser.memo("success") { sppf, s ->
+    return Parser.memo("success($v)") { sppf, s ->
         ParserResult.success(sppf.getTerminalNode(s, s, v))
     }
 }

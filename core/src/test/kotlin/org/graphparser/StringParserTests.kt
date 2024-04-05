@@ -59,7 +59,7 @@ class StringParserTests :ParserTests() {
     fun ambiguousWithFix() {
         val str = "aaaaaa"
         val a = "a".p
-        val s: StringParser<String> = fix("S") { s ->
+        val s by fix("s") { s ->
             (a seqr s seql a).many using { res -> res.joinToString("") { "[a${it}a]" } }
         }
 
