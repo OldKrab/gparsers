@@ -10,7 +10,7 @@ import org.parser.combinators.*
 import org.parser.combinators.string.StringPos
 
 
-class StringParserTests :ParserTests() {
+class StringParserTests : ParserTests() {
 
     @Test
     fun simple() {
@@ -23,7 +23,7 @@ class StringParserTests :ParserTests() {
 
     @Test
     fun sameTerminalParserWithDifferentAction() {
-        val s = "a".p using { _ -> 42 } or ("a".p using { _ -> 24})
+        val s = "a".p using { _ -> 42 } or ("a".p using { _ -> 24 })
         val str = "a"
         val nodes = str.applyParser(s)
         assertEquals(1, nodes.size)
@@ -32,7 +32,7 @@ class StringParserTests :ParserTests() {
 
     @Test
     fun sameEpsilonParserWithDifferentAction() {
-        val s = eps<StringPos>() using { _ -> 42 } or (eps<StringPos>() using { _ -> 24})
+        val s = eps<StringPos>() using { _ -> 42 } or (eps<StringPos>() using { _ -> 24 })
         val str = "a"
         val nodes = str.applyParser(s)
         assertEquals(1, nodes.size)
@@ -133,5 +133,22 @@ class StringParserTests :ParserTests() {
         val str = "aaaa"
         val nodes = str.applyParser(p)
         saveDotsToFolder(nodes, "infinite")
+    }
+
+    @Test
+    fun expressions() {
+        val num = "[0-9]*".toRegex().p using { it.toInt() }
+        val e = fix("e") { e ->
+            rule(
+                e seql "+".p seq e using { x: Int, y: Int -> x + y },
+                e seql "-".p seq e using { x: Int, y: Int -> x - y },
+                "(".p seqr e seql ")".p,
+                num,
+            )
+        }
+        val str = "10+(20-5)"
+        val nodes = str.applyParser(e).filter { it.rightState.pos == str.length }
+        assertEquals(1, nodes.size)
+        assertEquals(listOf(25), nodes[0].getResults().toList())
     }
 }

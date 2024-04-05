@@ -30,3 +30,12 @@ val String.p: StringParser<String>
             ParserResult.failure()
     }
 
+val Regex.p: StringParser<String>
+    get() = Parser.memo("\"$this\"") { sppf, i ->
+        val matchRes = this.matchAt(i.str, i.pos)
+        if (matchRes != null) {
+            val match = matchRes.value
+            ParserResult.success(sppf.getTerminalNode(i, i.move(match.length), match))
+        } else
+            ParserResult.failure()
+    }

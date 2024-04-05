@@ -95,9 +95,9 @@ class GraphParserTests : ParserTests() {
             addEdge(nA, eC, nA)
         }
 
-        val nodeA = v { it.value == "A" }
-        val edgeB = edge { it.label == "B" }
-        val edgeC = edge { it.label == "C" }
+        val nodeA by v { it.value == "A" }
+        val edgeB by edge { it.label == "B" }
+        val edgeC by edge { it.label == "C" }
 
         val parser = nodeA seq (edgeB or edgeC)
 
@@ -163,8 +163,8 @@ class GraphParserTests : ParserTests() {
         vertexA.view = "vA" // for debug
         edgeB.view = "eB"
 
-        val x = v { it.value == "A" } seq (edgeB seq vertexA).many
-        val nodes = gr.applyParser(x)
+        val s by v { it.value == "A" } seq (edgeB seq vertexA).many
+        val nodes = gr.applyParser(s)
         saveDotsToFolder(nodes, "loopWithManyWithStartState")
 
         assertEquals(1, nodes.size)
