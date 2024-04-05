@@ -1,35 +1,25 @@
 package org.parser.combinators.graph
 
 import org.parser.combinators.Parser
-import org.parser.combinators.applyParser
 import org.parser.sppf.NonPackedNode
 
-
+/**
+ * Base interface for graphs that can be parsed.
+ */
 interface Graph<V, E> {
+    /** Returns outgoing edges of vertex [v] if vertex present. */
     fun getEdges(v: V): List<E>?
+
+    /** Returns all vertexes of graph. */
     fun getVertexes(): Set<V>
+
+    /** Returns start and end vertexes of edge [e] if edge present. */
     fun getEdgeVertexes(e: E): Pair<V, V>?
-}
 
-fun <V, E, G : Graph<V, E>, O, R> G.applyParser(parser: Parser<StartState<V, E>, O, R>): List<NonPackedNode<StartState<V, E>, O, R>> {
-    return applyParser(parser, StartState(this))
-}
-
-
-
-data class StartState<V, E>(val gr: Graph<V, E>) {
-    override fun toString(): String {
-        return "StartState"
-    }
-}
-data class VertexState<V, E>(val gr: Graph<V, E>, val v: V){
-    override fun toString(): String {
-        return "VState($v)"
-    }
-}
-data class EdgeState<V, E>(val gr: Graph<V, E>, val edge: E) {
-
-    override fun toString(): String {
-        return "EState($edge)"
+    /**
+     * Applies parser to graph from every vertex. Parser should accept state [StartState].
+     * @return list of [NonPackedNode]. */
+    fun <O, R> applyParser(parser: Parser<StartState<V, E>, O, R>): List<NonPackedNode<StartState<V, E>, O, R>> {
+        return parser.parseState(StartState(this))
     }
 }

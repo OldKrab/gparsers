@@ -5,29 +5,21 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 
-class SPPF {
+class SPPFStorage {
     @JvmInline
     value class NodeHash(val v: Int)
 
     private val nodes = HashMap<NodeHash, Node>()
-    fun convertAllToDot(path: Path) {
-        val visitor = Visualizer()
-        visitor.begin()
-        for (node in nodes.values)
-            visitor.visit(node)
-        visitor.end()
-        Files.writeString(path, visitor.toString())
-    }
 
+    private fun <T> getIdAction(): (T) -> T = { it }
 
+    /** Returns node with [action] that maps [node]'s result. */
     fun <LS, RS, R, R2> withAction(node: NonPackedNode<LS, RS, R>, action: (R) -> R2): NonPackedNode<LS, RS, R2> {
         val newNode = node.withAction(action)
         val key = NodeHash(newNode.nodeHashCode())
         nodes[key] = newNode
         return newNode
     }
-
-    private fun <T> getIdAction(): (T) -> T = { it }
 
     @Suppress("UNCHECKED_CAST")
     fun <LS, RS, R> getTerminalNode(leftState: LS, rightState: RS, result: R): NonPackedNode<LS, RS, R> {
@@ -53,7 +45,7 @@ class SPPF {
     ): NonPackedNode<LS, RS, Pair<R1, R2>> {
         val leftState = leftChild.leftState
         val rightState = rightChild.rightState
-        val newNode = IntermediateNode<LS, RS, Pair<R1, R2>, R1, R2>(parser, leftState, rightState, getIdAction())
+        val newNode = IntermediateNode(parser, leftState, rightState, getIdAction())
         val key = NodeHash(newNode.nodeHashCode())
 
         val res = nodes.computeIfAbsent(key) { newNode } as IntermediateNode<LS, RS, Pair<R1, R2>, R1, R2>
@@ -69,12 +61,22 @@ class SPPF {
     ): NonPackedNode<LS, RS, R> {
         val leftState = child.leftState
         val rightState = child.rightState
-        val newNode = NonTerminalNode<LS, RS, R, Unit, R>(parser, leftState, rightState) { it.second }
+        val newNode = NonTerminalNode(parser, leftState, rightState, getIdAction())
         val key = NodeHash(newNode.nodeHashCode())
 
-        val res = nodes.computeIfAbsent(key) { newNode } as NonTerminalNode<LS, RS, R, Unit, R>
+        val res = nodes.computeIfAbsent(key) { newNode } as NonTerminalNode<LS, RS, R, R>
         res.packedNodes.add(PackedNode(null, child))
         return res
+    }
+
+    /** Creates dot file with graph of all stored nodes. */
+    internal fun convertAllToDot(path: Path) {
+        val visitor = Visualizer()
+        visitor.begin()
+        for (node in nodes.values)
+            visitor.visit(node)
+        visitor.end()
+        Files.writeString(path, visitor.toString())
     }
 }
 

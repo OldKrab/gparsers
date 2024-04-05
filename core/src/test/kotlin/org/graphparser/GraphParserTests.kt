@@ -7,7 +7,6 @@ import org.graphparser.TestCombinators.v
 import org.graphparser.TestCombinators.vertexEps
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
-import org.parser.combinators.applyParser
 import org.parser.combinators.graph.*
 import org.parser.combinators.*
 
@@ -45,12 +44,9 @@ private class SimpleGraph : Graph<SimpleVertex, SimpleEdge> {
     override fun getEdgeVertexes(e: SimpleEdge): Pair<SimpleVertex, SimpleVertex>? = edgeVertexes[e]
 }
 
-
 private object TestCombinators : GraphCombinators<SimpleVertex, SimpleEdge>
 
 class GraphParserTests : ParserTests() {
-
-
     @Test
     fun simpleNode() {
         val nA = SimpleVertex("A")
@@ -162,8 +158,8 @@ class GraphParserTests : ParserTests() {
 
         val vertexA = outV { it.value == "A" }
         val edgeB = edge { it.label == "B" }
-        vertexA.name = "vA" // for debug
-        edgeB.name = "eB"
+        vertexA.view = "vA" // for debug
+        edgeB.view = "eB"
 
         val x = v { it.value == "A" } seq (edgeB seq vertexA).many
         val nodes = gr.applyParser(x)
@@ -198,8 +194,8 @@ class GraphParserTests : ParserTests() {
 
         val vertexA = outV { it.value == "A" }
         val edgeB = edge { it.label == "B" }
-        vertexA.name = "vA" // for debug
-        edgeB.name = "eB"
+        vertexA.view = "vA" // for debug
+        edgeB.view = "eB"
         val s =
             fix("x") { s ->
                 rule(
@@ -209,7 +205,7 @@ class GraphParserTests : ParserTests() {
                     },
                 )
             }
-        val nodes = applyParser(s, VertexState(gr, SimpleVertex("A")))
+        val nodes = s.parseState(VertexState(gr, SimpleVertex("A")))
         saveDotsToFolder(nodes, "loopWithFix")
 
         assertEquals(1, nodes.size)
@@ -233,11 +229,11 @@ class GraphParserTests : ParserTests() {
 
         val vertexA = outV { it.value == "A" }
         val edgeB = edge { it.label == "B" }
-        vertexA.name = "vA"
-        edgeB.name = "eB"
+        vertexA.view = "vA"
+        edgeB.view = "eB"
         val s = (edgeB seq vertexA).many
 
-        val nodes = applyParser(s, VertexState(gr, SimpleVertex("A")))
+        val nodes = s.parseState(VertexState(gr, SimpleVertex("A")))
         saveDotsToFolder(nodes, "loopWithMany")
 
         assertEquals(1, nodes.size)

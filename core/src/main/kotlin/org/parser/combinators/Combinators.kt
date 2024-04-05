@@ -1,15 +1,11 @@
 package org.parser.combinators
 
 
-fun <S> eps(): Parser<S, S, Unit> {
-    return Parser.memo("eps") { sppf, i ->
-        ParserResult.success(sppf.getEpsilonNode(i))
-    }
-}
-
+/** Returns parser that, for all output states of current parser, runs the [p2] parser.
+ * Parser returns all possible combinations of results from the current and [p2] parsers. */
 infix fun <In, Out1, R1, Out2, R2> Parser<In, Out1, R1>.seq(p2: Parser<Out1, Out2, R2>): Parser<In, Out2, Pair<R1, R2>> {
     val p1 = this
-    val name = "${p1.name} ${p2.name}"
+    val name = "${p1.view} ${p2.view}"
     return fix(name) { q ->
         Parser.memo(name) { sppf, i ->
             p1.parse(sppf, i)
@@ -23,35 +19,39 @@ infix fun <In, Out1, R1, Out2, R2> Parser<In, Out1, R1>.seq(p2: Parser<Out1, Out
     }
 }
 
-infix fun <In, Out1, R1, Out2, R2> Parser<In, Out1, R1>.seql(other: Parser<Out1, Out2, R2>): Parser<In, Out2, R1> {
-    return this seq other using { (l, _) -> l }
+/** Same as [seq] but returns parser that returns results only from the current parser. */
+infix fun <In, Out1, R1, Out2, R2> Parser<In, Out1, R1>.seql(p2: Parser<Out1, Out2, R2>): Parser<In, Out2, R1> {
+    return this seq p2 using { (l, _) -> l }
 }
 
-infix fun <In, Out1, R1, Out2, R2> Parser<In, Out1, R1>.seqr(other: Parser<Out1, Out2, R2>): Parser<In, Out2, R2> {
-    return this seq other using { (_, r) -> r }
+/** Same as [seq] but returns parser that returns results only from the [p2] parser. */
+infix fun <In, Out1, R1, Out2, R2> Parser<In, Out1, R1>.seqr(p2: Parser<Out1, Out2, R2>): Parser<In, Out2, R2> {
+    return this seq p2 using { (_, r) -> r }
 }
 
 private fun <In, Out, R> Parser<In, Out, R>.rule1(head: Parser<In, Out, R>): Parser<In, Out, R> {
     val p = this
-    return Parser.memo(name) { sppf, inS ->
+    return Parser.memo(view) { sppf, inS ->
         p.parse(sppf, inS).map { t -> sppf.getNonTerminalNode(head, t) }
     }
 }
 
-infix fun <In, Out, R> Parser<In, Out, R>.or(other: Parser<In, Out, R>): Parser<In, Out, R> {
-    val name = "${this.name} | ${other.name}"
+/** Returns parser that combines results of the current and [p2] parser. */
+infix fun <In, Out, R> Parser<In, Out, R>.or(p2: Parser<In, Out, R>): Parser<In, Out, R> {
+    val name = "${this.view} | ${p2.view}"
     return fix(name) { q ->
         Parser.memo(name) { sppf, input ->
-            this.rule1(q).parse(sppf, input).orElse { other.rule1(q).parse(sppf, input) }
+            this.rule1(q).parse(sppf, input).orElse { p2.rule1(q).parse(sppf, input) }
         }
     }
 }
 
+/** Returns parser that combines results of all provided parsers. */
 fun <In, Out, R> rule(
     p: Parser<In, Out, R>,
     vararg parsers: Parser<In, Out, R>
 ): Parser<In, Out, R> {
-    val name = "${p.name} ${parsers.joinToString { " | ${it.name}" }}"
+    val name = "${p.view} ${parsers.joinToString { " | ${it.view}" }}"
     return fix(name) { q ->
         Parser.memo(name) { sppf, input ->
             val firstRes = p.rule1(q).parse(sppf, input)
@@ -63,6 +63,8 @@ fun <In, Out, R> rule(
 
 }
 
+// TODO implement lookup with using sppf. Maybe we need to create new sppf to avoid extra nodes in main sppf
+//
 //    fun <In, Out, R> lookup(p: Parser<E, In, Out, R>): Parser<E, In, In, R> {
 //        return Parser.make("lookup") { env, sppf, input ->
 //            p.parse(env, sppf, input).map { t -> t }
@@ -73,19 +75,23 @@ fun <In, Out, R> rule(
 //        return this seql lookup(constraint)
 //    }
 
-fun <I, O, R> fix(name: String, f: (Parser<I, O, R>) -> Parser<I, O, R>): Parser<I, O, R> {
+/** Returns parser that [f] returns. Same parser will be passed as argument of [f]. You can use it to define parser that uses itself.
+ * @sample org.parser.samples.fixExample */
+fun <I, O, R> fix(name: String = "fix", f: (Parser<I, O, R>) -> Parser<I, O, R>): Parser<I, O, R> {
     lateinit var p: Parser<I, O, R>
-    p = Parser.memo(name) { sppf, s -> f(p).parse(sppf, s) }
+    val q: Parser<I, O, R> = Parser.memo(name) { sppf, s -> p.parse(sppf, s) }
+    p = f(q)
     return p
 }
 
+/** Returns same parser where result of this parser will be replaced with [f]. */
 infix fun <In, Out, A, B> Parser<In, Out, A>.using(f: (A) -> B): Parser<In, Out, B> {
-    return Parser.memo(this.name) { sppf, input ->
+    return Parser.memo(this.view) { sppf, input ->
         this.parse(sppf, input).map { t -> sppf.withAction(t, f) }
     }
 }
 
-//TODO we should generate next using functions
+//TODO we should generate the next `using` functions
 infix fun <In, Out, A1, A2, B> Parser<In, Out, Pair<A1, A2>>.using(f: (A1, A2) -> B): Parser<In, Out, B> {
     return this using { r -> f(r.first, r.second) }
 }
@@ -98,18 +104,31 @@ infix fun <In, Out, A1, A2, A3, A4, B> Parser<In, Out, Pair<Pair<Pair<A1, A2>, A
     return this using { (r, a4) -> f(r.first.first, r.first.second, r.second, a4) }
 }
 
-fun <S, R> success(v: R): Parser<S, S, R> =
-    Parser.memo("success") { sppf, s -> ParserResult { k -> k(sppf.getTerminalNode(s, s, v)) } }
+/** Returns parser that not change state and returns Unit */
+fun <S> eps(): Parser<S, S, Unit> {
+    return Parser.memo("eps") { sppf, i ->
+        ParserResult.success(sppf.getEpsilonNode(i))
+    }
+}
 
+/** Returns parser that not change state and returns [v]. */
+fun <S, R> success(v: R): Parser<S, S, R> {
+    return Parser.memo("success") { sppf, s ->
+        ParserResult.success(sppf.getTerminalNode(s, s, v))
+    }
+}
+
+/** Returns parser that not change state and returns nothing. */
 fun <S, R> fail(): Parser<S, S, R> = Parser.memo("fail") { _, _ -> ParserResult { _ -> } }
 
+/** Returns parser that applies this parser zero or more times. Parser returns [List] of results. */
 val <S, R> Parser<S, S, R>.many: Parser<S, S, List<R>>
     get() {
-        val name = "(${this.name})*"
+        val name = "(${this.view})*"
         return fix(name) { manyP ->
             val res =
                 success<S, List<R>>(emptyList()) or ((this seq manyP) using { head, tail -> listOf(head) + tail })
-            res.name = name
+            res.view = name
             res
         }
     }
