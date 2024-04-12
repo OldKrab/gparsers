@@ -22,6 +22,17 @@ class StringParserTests : ParserTests() {
     }
 
     @Test
+    fun simpleAlternation() {
+val s1 = "A".p seq "B".p
+val s2 = "A".p seq "C".p
+val s = s1 or s2
+        val str = "a"
+        val results = str.applyParser(s).filter { it.rightState.pos == str.length }
+        assertEquals(1, results.size)
+        assertEquals(setOf("a"), results[0].getResults().toSet())
+    }
+
+    @Test
     fun sameTerminalParserWithDifferentAction() {
         val s = "a".p using { _ -> 42 } or ("a".p using { _ -> 24 })
         val str = "a"

@@ -163,8 +163,8 @@ class GraphParserTests : ParserTests() {
         vertexA.view = "vA" // for debug
         edgeB.view = "eB"
 
-        val s by v { it.value == "A" } seq (edgeB seq vertexA).many
-        val nodes = gr.applyParser(s)
+        val x = v { it.value == "A" } seq (edgeB seq vertexA).many
+        val nodes = gr.applyParser(x)
         saveDotsToFolder(nodes, "loopWithManyWithStartState")
 
         assertEquals(1, nodes.size)
@@ -220,6 +220,84 @@ class GraphParserTests : ParserTests() {
             }
         val nodes = s.parseState(VertexState(gr, SimpleVertex("A")))
         saveDotsToFolder(nodes, "loopWithFix")
+
+        assertEquals(1, nodes.size)
+        val results = nodes[0].getResults().take(3).toSet()
+        assertEquals(
+            setOf(
+                listOf(),
+                listOf(Pair(eB, vA)),
+                listOf(Pair(eB, vA), Pair(eB, vA)),
+            ), results.toSet()
+        )
+    }
+
+    @Test
+    fun loopLeftRec() {
+        val vA = SimpleVertex("A")
+        val eB = SimpleEdge("B")
+        val gr = SimpleGraph().apply {
+            addEdge(vA, eB, vA)
+        }
+
+        val vertexA = outV { it.value == "A" }
+        val edgeB = edge { it.label == "B" }
+        vertexA.view = "vA" // for debug
+        edgeB.view = "eB"
+        val s =
+            fix("s") { s ->
+                rule(
+                    (s seq edgeB seq vertexA) using { prefix: List<Pair<SimpleEdge, SimpleVertex>>, e, v ->
+                        prefix + Pair(e, v)
+                    },
+                    vertexEps() using { _ -> emptyList() },
+                )
+            }
+        val nodes = s.parseState(VertexState(gr, SimpleVertex("A")))
+        saveDotsToFolder(nodes, "loopLeftRec")
+
+        assertEquals(1, nodes.size)
+        val results = nodes[0].getResults().take(3).toSet()
+        assertEquals(
+            setOf(
+                listOf(),
+                listOf(Pair(eB, vA)),
+                listOf(Pair(eB, vA), Pair(eB, vA)),
+            ), results.toSet()
+        )
+    }
+
+    @Test
+    fun loopLeftRec2() {
+        val vA = SimpleVertex("A")
+        val eB = SimpleEdge("B")
+        val eC = SimpleEdge("C")
+        val gr = SimpleGraph().apply {
+            addEdge(vA, eB, vA)
+            addEdge(vA, eC, vA)
+        }
+
+        val vertexA by outV { it.value == "A" }
+        val edgeB by edge { it.label == "B" }
+        val edgeC by edge { it.label == "C" }
+        val s1: VVGraphParser<SimpleVertex, SimpleEdge, List<Pair<SimpleEdge, SimpleVertex>>>
+                by fix("s1") { s1 ->
+                    rule(
+                        (s1 seq edgeB seq vertexA) using { prefix, e, v -> prefix + Pair(e, v) },
+                        vertexEps() using { _ -> emptyList() }
+                    )
+                }
+        val s2: VVGraphParser<SimpleVertex, SimpleEdge, List<Pair<SimpleEdge, SimpleVertex>>>
+                by fix("s2") { s2 ->
+                    rule(
+                        (s2 seq edgeC seq vertexA) using { prefix, e, v -> prefix + Pair(e, v) },
+                        vertexEps() using { _ -> emptyList() }
+                    )
+                }
+        val s by s1 or s2
+
+        val nodes = s.parseState(VertexState(gr, vA))
+        saveDotsToFolder(nodes, "loopLeftRec2")
 
         assertEquals(1, nodes.size)
         val results = nodes[0].getResults().take(3).toSet()
