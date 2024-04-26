@@ -120,7 +120,7 @@ fun <S, R> success(v: R): Parser<S, S, R> {
 }
 
 /** Returns parser that not change state and returns nothing. */
-fun <S, R> fail(): Parser<S, S, R> = Parser.memo("fail") { _, _ -> ParserResult { _ -> } }
+fun <S, R> fail(): Parser<S, S, R> = Parser.memo("fail") { _, _ -> ParserResult.failure() }
 
 /** Returns parser that applies this parser zero or more times. Parser returns [List] of results. */
 val <S, R> Parser<S, S, R>.many: Parser<S, S, List<R>>

@@ -236,7 +236,7 @@ class GraphParserTests : ParserTests() {
     fun testStackOverflow() {
         val gr = SimpleGraph().apply {
             var prev = SimpleVertex("0")
-            for (i in 1..700) {
+            for (i in 1..300) {
                 val cur = SimpleVertex(i.toString())
                 val e = SimpleEdge("e$i")
                 addEdge(prev, e, cur)

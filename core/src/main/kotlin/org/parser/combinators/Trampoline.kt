@@ -3,7 +3,7 @@ package org.parser.combinators
 import java.util.*
 import kotlin.collections.ArrayDeque
 
-object Trampoline {
+class Trampoline {
      val calls: Queue<() -> Unit> = LinkedList()
 
     fun call(f: () -> Unit) {
