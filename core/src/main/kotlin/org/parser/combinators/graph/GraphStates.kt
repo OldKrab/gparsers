@@ -1,6 +1,7 @@
 package org.parser.combinators.graph
 
 import org.parser.combinators.Parser
+import kotlin.random.Random
 
 /** Initial state of graph parsing. */
 data class StartState<V, E>(val gr: Graph<V, E>) {
@@ -9,7 +10,7 @@ data class StartState<V, E>(val gr: Graph<V, E>) {
     }
 }
 
-data class VertexState<V, E>(val gr: Graph<V, E>, val v: V){
+data class VertexState<V, E>(val gr: Graph<V, E>, val v: V) {
     override fun toString(): String {
         return "VState($v)"
     }

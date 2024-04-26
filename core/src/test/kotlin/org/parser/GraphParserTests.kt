@@ -1,10 +1,10 @@
-package org.graphparser
+package org.parser
 
-import org.graphparser.TestCombinators.edge
-import org.graphparser.TestCombinators.outV
+import org.parser.TestCombinators.edge
+import org.parser.TestCombinators.outV
 
-import org.graphparser.TestCombinators.v
-import org.graphparser.TestCombinators.vertexEps
+import org.parser.TestCombinators.v
+import org.parser.TestCombinators.vertexEps
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.parser.combinators.graph.*
@@ -230,6 +230,34 @@ class GraphParserTests : ParserTests() {
                 listOf(Pair(eB, vA), Pair(eB, vA)),
             ), results.toSet()
         )
+    }
+
+    @Test
+    fun testStackOverflow() {
+        val gr = SimpleGraph().apply {
+            var prev = SimpleVertex("0")
+            for (i in 1..700) {
+                val cur = SimpleVertex(i.toString())
+                val e = SimpleEdge("e$i")
+                addEdge(prev, e, cur)
+                prev = cur
+            }
+        }
+
+        val s =
+            fix("x") { s ->
+                rule(
+                    vertexEps() using { _ -> emptyList() },
+                    (edge { true } seq outV() seq s) using { e, v, rest: List<Pair<SimpleEdge, SimpleVertex>> ->
+                        listOf(Pair(e, v)) + rest
+                    },
+                )
+            }
+        val nodes = s.parseState(VertexState(gr, SimpleVertex("0")))
+//        saveDotsToFolder(nodes, "testStackOverflow")
+//
+//        val result = nodes[0].getResults().drop(10).first()
+
     }
 
     @Test

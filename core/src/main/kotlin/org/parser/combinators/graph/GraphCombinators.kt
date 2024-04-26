@@ -28,7 +28,7 @@ interface GraphCombinators<V, E> {
             val gr = edgeState.gr
             val (_, outV) = gr.getEdgeVertexes(edgeState.edge) ?: return@memo ParserResult.failure()
             if (!p(outV)) return@memo ParserResult.failure()
-            ParserResult.success(sppf.getTerminalNode(edgeState, VertexState(gr, outV), outV))
+            ParserResult.success(sppf.getTerminalNode(edgeState, VertexState(gr, outV,), outV))
         }
     }
 

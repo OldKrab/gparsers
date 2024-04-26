@@ -11,7 +11,7 @@ interface BaseParser
  *
  * @property parse Parses [InS] state using [SPPFStorage] to store SPPF nodes. Returns [ParserResult] with [NonPackedNode] nodes.
  */
-class Parser<InS, OutS, R> private constructor(
+class Parser<InS, OutS,  R> private constructor(
     val parse: (SPPFStorage, InS) -> ParserResult<NonPackedNode<InS, OutS, R>>,
     var view: String
 ) : BaseParser {

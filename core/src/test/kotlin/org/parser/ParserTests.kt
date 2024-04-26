@@ -1,4 +1,4 @@
-package org.graphparser
+package org.parser
 
 import org.parser.sppf.Visualizer
 import org.parser.sppf.Node

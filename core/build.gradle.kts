@@ -16,3 +16,10 @@ dependencies {
 tasks.test {
     useJUnitPlatform()
 }
+
+
+task("dependencyList") {
+    doFirst {
+        println(configurations.runtimeClasspath.get().files.joinToString(separator = ":"))
+    }
+}

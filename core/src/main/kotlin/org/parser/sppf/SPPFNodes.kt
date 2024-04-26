@@ -7,23 +7,15 @@ import kotlin.collections.ArrayList
 sealed interface Node
 
 
-sealed interface NodeWithResults<out R>: Node {
+sealed interface NodeWithResults<out R> : Node {
     fun getResults(): Sequence<R>
 }
 
 
 sealed class NodeWithHashCode : Node {
-    abstract fun nodeHashCode(): Int
+    abstract override fun hashCode(): Int
 
-    override fun hashCode(): Int {
-        return nodeHashCode()
-    }
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is NodeWithHashCode) return false
-        return nodeHashCode() == other.nodeHashCode()
-    }
+    abstract override fun equals(other: Any?): Boolean
 }
 
 
@@ -39,7 +31,8 @@ class PackedNode<LS, MS, RS, out R1, out R2>(
 }
 
 
-sealed class NonPackedNode<LS, RS, out R>(val leftState: LS, val rightState: RS) : NodeWithHashCode(), NodeWithResults<R> {
+sealed class NonPackedNode<LS, RS, out R>(val leftState: LS, val rightState: RS) : NodeWithHashCode(),
+    NodeWithResults<R> {
     /** Returns new node where results are mapped with [f] function. */
     abstract fun <R2> withAction(f: (R) -> R2): NonPackedNode<LS, RS, R2>
 }
@@ -60,9 +53,6 @@ open class IntermediateNode<LS, RS, R, CR1, CR2>(
         return res
     }
 
-    override fun nodeHashCode(): Int {
-        return Objects.hash(parser, leftState, rightState)
-    }
 
     override fun toString(): String {
         return "$parser, $leftState, $rightState"
@@ -70,6 +60,23 @@ open class IntermediateNode<LS, RS, R, CR1, CR2>(
 
     override fun getResults(): Sequence<R> {
         return packedNodes.asSequence().flatMap { it.getResults() }.map { action(it) }
+    }
+
+    override fun hashCode(): Int {
+        return Objects.hash(parser, leftState, rightState)
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as IntermediateNode<*, *, *, *, *>
+
+        if (parser != other.parser) return false
+        if (leftState != other.leftState) return false
+        if (rightState != other.rightState) return false
+
+        return true
     }
 }
 
@@ -90,16 +97,29 @@ class NonTerminalNode<LS, RS, R, CR>(
         return res
     }
 
-    override fun nodeHashCode(): Int {
-        return Objects.hash(parser, leftState, rightState)
-    }
-
     override fun toString(): String {
         return "$nt, $leftState, $rightState"
     }
 
     override fun getResults(): Sequence<R> {
         return packedNodes.asSequence().flatMap { it.getResults() }.map { action(it.second) }
+    }
+
+    override fun hashCode(): Int {
+        return Objects.hash(parser, leftState, rightState)
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as NonTerminalNode<*, *, *, *>
+
+        if (parser != other.parser) return false
+        if (leftState != other.leftState) return false
+        if (rightState != other.rightState) return false
+
+        return true
     }
 }
 
@@ -118,9 +138,6 @@ open class TerminalNode<LS, RS, R, R2>(
         return sequenceOf(action(result))
     }
 
-    override fun nodeHashCode(): Int {
-        return Objects.hash(result, leftState, rightState, action)
-    }
 
     override fun toString(): String {
         var resultView = result.toString()
@@ -128,6 +145,24 @@ open class TerminalNode<LS, RS, R, R2>(
             resultView = "\"$resultView\""
         }
         return "$resultView, $leftState, $rightState"
+    }
+
+    override fun hashCode(): Int {
+        return Objects.hash(result, leftState, rightState, action)
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as TerminalNode<*, *, *, *>
+
+        if (result != other.result) return false
+        if (leftState != other.leftState) return false
+        if (rightState != other.rightState) return false
+        if (action != other.action) return false
+
+        return true
     }
 }
 
@@ -142,11 +177,23 @@ class EpsilonNode<S, R>(state: S, val action: (Unit) -> R) : NonPackedNode<S, S,
         return EpsilonNode(leftState) { f(action(it)) }
     }
 
-    override fun nodeHashCode(): Int {
+    override fun toString(): String {
+        return "ε, $leftState"
+    }
+
+    override fun hashCode(): Int {
         return Objects.hash(leftState, action)
     }
 
-    override fun toString(): String {
-        return "ε, $leftState"
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as EpsilonNode<*, *>
+
+        if (leftState != other.leftState) return false
+        if (action != other.action) return false
+
+        return true
     }
 }

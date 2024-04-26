@@ -8,8 +8,17 @@ value class ParserResult<T>(val invoke: (Continuation<T>) -> Unit) {
 
     fun getResults(): List<T> {
         val results = ArrayList<T>()
-        this.invoke {
-            results.add(it)
+        Trampoline.call {
+            this.invoke {
+                results.add(it)
+            }
+        }
+        try{
+            Trampoline.runLoop()
+
+        }finally {
+            Trampoline.calls.clear()
+
         }
         return results
     }
@@ -18,7 +27,9 @@ value class ParserResult<T>(val invoke: (Continuation<T>) -> Unit) {
         return ParserResult { k ->
             val k2: Continuation<T> = { t ->
                 val t2 = transform(t)
-                k(t2)
+                Trampoline.call {
+                    k(t2)
+                }
             }
             this.invoke(k2)
         }
@@ -52,7 +63,7 @@ value class ParserResult<T>(val invoke: (Continuation<T>) -> Unit) {
 
         /** Returns [ParserResult] that memoizes all continuations and calls them on any unique result returned by [res()][res].  */
         internal fun <T> memoResult(res: () -> ParserResult<T>): ParserResult<T> {
-            val results = ArrayList<T>()
+            val results = LinkedHashSet<T>()
             val continuations = ArrayList<Continuation<T>>()
             return ParserResult { k ->
                 if (continuations.isEmpty()) {
@@ -61,7 +72,7 @@ value class ParserResult<T>(val invoke: (Continuation<T>) -> Unit) {
                     p.invoke { t ->
                         if (!results.contains(t)) {
                             results.add(t)
-                            for (continuation in continuations) {
+                            for (continuation in continuations.reversed()) {
                                 continuation(t)
                             }
                         }

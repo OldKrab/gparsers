@@ -1,4 +1,4 @@
-package org.graphparser
+package org.parser
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.parser.combinators.string.StringParser
