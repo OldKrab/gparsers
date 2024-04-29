@@ -1,5 +1,7 @@
 package org.parser.combinators
 
+import org.parser.sppf.SPPFStorage
+
 
 /** Returns parser that, for all output states of current parser, runs the [p2] parser.
  * Parser returns all possible combinations of results from the current and [p2] parsers. */
@@ -63,17 +65,16 @@ fun <In, Out, R> rule(
 
 }
 
-// TODO implement lookup with using sppf. Maybe we need to create new sppf to avoid extra nodes in main sppf
-//
-//    fun <In, Out, R> lookup(p: Parser<E, In, Out, R>): Parser<E, In, In, R> {
-//        return Parser.make("lookup") { env, sppf, input ->
-//            p.parse(env, sppf, input).map { t -> t }
-//        }
-//    }
+fun <In, Out, R> lookup(p: Parser<In, Out, R>): Parser<In, In, R> {
+    return Parser.memo("lookup") { _, input ->
+        val sppf = SPPFStorage()
+        p.parse(sppf, input).map { sppf.getEpsilonNode(input) }
+    }
+}
 
-//    fun <In, Out, Out2, R, R2> Parser<E, In, Out, R>.that(constraint: Parser<E, Out, Out2, R2>): Parser<E, In, Out, R> {
-//        return this seql lookup(constraint)
-//    }
+fun <In, Out, Out2, R, R2> Parser<In, Out, R>.that(constraint: Parser<Out, Out2, R2>): Parser<In, Out, R> {
+    return this seql lookup(constraint)
+}
 
 /** Returns parser that [f] returns. Same parser will be passed as argument of [f]. You can use it to define parser that uses itself.
  * @sample org.parser.samples.fixExample */

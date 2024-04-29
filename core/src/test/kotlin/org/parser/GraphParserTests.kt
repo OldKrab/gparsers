@@ -367,28 +367,30 @@ class GraphParserTests : ParserTests() {
     }
 
 
-//    @Test
-//    fun withThat() {
-//        val danV = SimpleVertex("Dan")
-//        val friendE = SimpleEdge("friend")
-//        val lindaV = SimpleVertex("Linda")
-//        val gr = SimpleGraph().apply {
-//            val loves = SimpleEdge("loves")
-//            val john = SimpleVertex("John")
-//            val mary = SimpleVertex("Mary")
-//            addEdge(danV, friendE, john)
-//            addEdge(danV, loves, mary)
-//            addEdge(john, friendE, lindaV)
-//        }
-//
-//        val person = v()
-//        val mary = outV { it.value == "Mary" }
-//        val loves = edge { it.label == "loves" }
-//        val friend = edge { it.label == "friend" }
-//        val maryLover = person.that(loves seq mary)
-//        val parser = maryLover seq friend seq outV()
-//        val res = gr.applyParser(parser).toList()
-//        assertEquals(listOf(Pair(Pair(danV, friendE), lindaV)), res)
-//    }
+    @Test
+    fun withThat() {
+        val danV = SimpleVertex("Dan")
+        val friendE = SimpleEdge("friend")
+        val lindaV = SimpleVertex("Linda")
+        val gr = SimpleGraph().apply {
+            val loves = SimpleEdge("loves")
+            val john = SimpleVertex("John")
+            val mary = SimpleVertex("Mary")
+            addEdge(danV, friendE, john)
+            addEdge(danV, loves, mary)
+            addEdge(john, friendE, lindaV)
+        }
+
+        val person = v()
+        val mary = outV { it.value == "Mary" }
+        val loves = edge { it.label == "loves" }
+        val friend = edge { it.label == "friend" }
+        val maryLover = person.that(loves seq mary)
+        val parser = maryLover seq friend seq outV()
+        val trees = gr.applyParser(parser)
+        assertEquals(1, trees.size)
+        val res = trees[0].getResults().toList()
+        assertEquals(listOf(Pair(Pair(danV, friendE), lindaV)), res)
+    }
 
 }
