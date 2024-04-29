@@ -23,3 +23,7 @@ task("dependencyList") {
         println(configurations.runtimeClasspath.get().files.joinToString(separator = ":"))
     }
 }
+
+kotlin {
+    jvmToolchain(21)
+}
