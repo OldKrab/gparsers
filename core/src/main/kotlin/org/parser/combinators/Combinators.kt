@@ -135,3 +135,9 @@ val <S, R> Parser<S, S, R>.many: Parser<S, S, List<R>>
         }
     }
 
+/** Returns parser that applies this parser one or more times. Parser returns [List] of results. */
+val <S, R> Parser<S, S, R>.some: Parser<S, S, List<R>>
+    get() {
+        return (this seq this.many) using { x, lst -> listOf(x) + lst }
+    }
+

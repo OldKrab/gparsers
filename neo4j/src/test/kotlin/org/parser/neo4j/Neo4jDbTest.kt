@@ -6,16 +6,16 @@ import org.neo4j.graphdb.Label
 
 class Neo4jDbTest : BaseDefaultNeo4jTest() {
     val nodeName = "node name"
-    lateinit var nodeId: String
+    var nodeId: Long = 0
 
     override fun fillDb(db: GraphDatabaseService) {
         nodeId = db.beginTx().let { tx ->
             val node = tx.createNode(Label.label(nodeName))
             node.setProperty("key", "value")
             tx.commit()
-            node.elementId
+            node.id
         }
-        val node = db.beginTx().getNodeByElementId(nodeId)
+        val node = db.beginTx().getNodeById(nodeId)
         val labels =  node.labels.toList()
         assertTrue(node.hasProperty("key"))
         assertEquals("value", node.getProperty("key"))

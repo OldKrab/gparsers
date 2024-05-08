@@ -11,7 +11,7 @@ interface Graph<V, E> {
     fun getEdges(v: V): List<E>?
 
     /** Returns all vertexes of graph. */
-    fun getVertexes(): Set<V>
+    fun getVertexes(): Iterable<V>
 
     /** Returns start and end vertexes of edge [e] if edge present. */
     fun getEdgeVertexes(e: E): Pair<V, V>?

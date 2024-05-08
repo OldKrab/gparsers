@@ -25,6 +25,6 @@ abstract class BaseNeo4jTest<N : Neo4jNode, E : Neo4jEdge> {
 
 abstract class BaseDefaultNeo4jTest: BaseNeo4jTest<DefaultNeo4jNode, DefaultNeo4jEdge>() {
     override fun createGraph(db: GraphDatabaseService): DefaultNeo4jGraph {
-        return DefaultNeo4jGraph(db, DefaultNeo4jGraphFactory())
+        return DefaultNeo4jGraph(db)
     }
 }

@@ -1,5 +1,6 @@
 plugins {
     kotlin("jvm") version "1.9.22"
+    id("maven-publish")
 }
 
 group = "org.parser"
@@ -25,5 +26,14 @@ task("dependencyList") {
 }
 
 kotlin {
-    jvmToolchain(21)
+    jvmToolchain(11)
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            artifactId = "graphParserCombinators"
+            from(components["java"])
+        }
+    }
 }

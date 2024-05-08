@@ -1,20 +1,23 @@
 plugins {
     kotlin("jvm") version "1.9.22"
+    id("maven-publish")
+
 }
 
-group = "org.parser.neo4j"
+group = "org.parser"
 version = "1.0-SNAPSHOT"
 
 repositories {
     mavenCentral()
+    mavenLocal()
 }
 
 dependencies {
     testImplementation(kotlin("test"))
     implementation(project(":core"))
 
-    implementation("org.neo4j:neo4j-kernel:5.19.0")
-    testImplementation("org.neo4j.test:neo4j-harness:5.19.0")
+    implementation("org.neo4j:neo4j-kernel:4.4.33")
+    testImplementation("org.neo4j.test:neo4j-harness:4.4.33")
 }
 
 tasks.test {
@@ -22,5 +25,14 @@ tasks.test {
 }
 
 kotlin {
-    jvmToolchain(21)
+    jvmToolchain(11)
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            artifactId = "graphParserCombinators-neo4j"
+            from(components["java"])
+        }
+    }
 }

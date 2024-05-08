@@ -2,6 +2,11 @@ package org.parser.combinators
 
 typealias Continuation<N> = (N) -> Unit
 
+private fun<T> memoK(k: Continuation<T>): Continuation<T> {
+    val s = HashSet<T>()
+    return {t -> if (t !in s) {s += t; k(t) } }
+}
+
 /** The [ParserResult] class represent all results of parsing. It uses Continuation-passing style. */
 @JvmInline
 value class ParserResult<T>(val invoke: (Trampoline, Continuation<T>) -> Unit) {
@@ -25,7 +30,7 @@ value class ParserResult<T>(val invoke: (Trampoline, Continuation<T>) -> Unit) {
                     k(t2)
                 }
             }
-            this.invoke(trampoline, k2)
+            this.invoke(trampoline, memoK(k2))
         }
     }
 
@@ -38,7 +43,7 @@ value class ParserResult<T>(val invoke: (Trampoline, Continuation<T>) -> Unit) {
                     }
                 }
             }
-            this.invoke(trampoline, resK)
+            this.invoke(trampoline, memoK(resK))
         }
     }
 
