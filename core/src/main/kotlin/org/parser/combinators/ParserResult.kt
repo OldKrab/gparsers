@@ -54,8 +54,8 @@ value class ParserResult<T>(val invoke: (Trampoline, Continuation<T>) -> Unit) {
     /** Combines results with [ParserResult] that [nextRes] returns. */
     fun orElse(nextRes: () -> ParserResult<T>): ParserResult<T> {
         return ParserResult { trampoline, k ->
-            this.invoke(trampoline, k)
-            nextRes().invoke(trampoline, k)
+            trampoline.call { this.invoke(trampoline, k) }
+            trampoline.call { nextRes().invoke(trampoline, k) }
         }
     }
 
