@@ -1,6 +1,6 @@
 package org.parser
 
-import org.parser.TestCombinators.edge
+import org.parser.TestCombinators.outE
 import org.parser.TestCombinators.outV
 
 import org.parser.TestCombinators.v
@@ -23,7 +23,8 @@ private data class SimpleEdge(val label: String) {
 }
 
 private class SimpleGraph : Graph<SimpleVertex, SimpleEdge> {
-    private val vertexesEdges = HashMap<SimpleVertex, MutableList<SimpleEdge>>()
+    private val vertexesOutEdges = HashMap<SimpleVertex, MutableList<SimpleEdge>>()
+    private val vertexesInEdges = HashMap<SimpleVertex, MutableList<SimpleEdge>>()
     private val edgeVertexes = HashMap<SimpleEdge, Pair<SimpleVertex, SimpleVertex>>()
     private val vertexes = HashSet<SimpleVertex>()
 
@@ -35,11 +36,14 @@ private class SimpleGraph : Graph<SimpleVertex, SimpleEdge> {
     fun addEdge(u: SimpleVertex, e: SimpleEdge, v: SimpleVertex) {
         addVertex(u)
         addVertex(v)
-        vertexesEdges.getOrPut(u) { ArrayList() }.add(e)
+        vertexesOutEdges.getOrPut(u) { ArrayList() }.add(e)
+        vertexesInEdges.getOrPut(v) { ArrayList() }.add(e)
         edgeVertexes[e] = Pair(u, v)
     }
 
-    override fun getEdges(v: SimpleVertex): List<SimpleEdge>? = vertexesEdges[v]
+    override fun getOutgoingEdges(v: SimpleVertex): List<SimpleEdge>? = vertexesOutEdges[v]
+    override fun getIncomingEdges(v: SimpleVertex): List<SimpleEdge>? = vertexesInEdges[v]
+
     override fun getVertexes(): Set<SimpleVertex> = vertexes
     override fun getEdgeVertexes(e: SimpleEdge): Pair<SimpleVertex, SimpleVertex>? = edgeVertexes[e]
 }
@@ -75,7 +79,7 @@ class GraphParserTests : ParserTests() {
             addEdge(nA, eB, nA)
         }
 
-        val parser = v { it.value == "A" } seq edge { it.label == "B" }
+        val parser = v { it.value == "A" } seq outE { it.label == "B" }
 
         val nodes = gr.applyParser(parser)
         saveDotsToFolder(nodes, "simpleNodeAndEdge")
@@ -96,8 +100,8 @@ class GraphParserTests : ParserTests() {
         }
 
         val nodeA by v { it.value == "A" }
-        val edgeB by edge { it.label == "B" }
-        val edgeC by edge { it.label == "C" }
+        val edgeB by outE { it.label == "B" }
+        val edgeC by outE { it.label == "C" }
 
         val parser = nodeA seq (edgeB or edgeC)
 
@@ -121,8 +125,8 @@ class GraphParserTests : ParserTests() {
         }
 
         val isA: (SimpleVertex) -> Boolean = { it.value == "A" }
-        val edgeB by edge { it.label == "B" }
-        val edgeC by edge { it.label == "C" }
+        val edgeB by outE { it.label == "B" }
+        val edgeC by outE { it.label == "C" }
         val vertexA by outV(isA)
         val startVertexA by v(isA)
 
@@ -159,7 +163,7 @@ class GraphParserTests : ParserTests() {
         }
 
         val vertexA = outV { it.value == "A" }
-        val edgeB = edge { it.label == "B" }
+        val edgeB = outE { it.label == "B" }
         vertexA.view = "vA" // for debug
         edgeB.view = "eB"
 
@@ -190,7 +194,7 @@ class GraphParserTests : ParserTests() {
             addEdge(dan, SimpleEdge("loves"), mary)
             addEdge(dan, SimpleEdge("friend"), john)
         }
-        val p = v { it.value == "Dan" } seqr edge { it.label == "loves" } seqr outV()
+        val p = v { it.value == "Dan" } seqr outE { it.label == "loves" } seqr outV()
         val nodes = gr.applyParser(p)
         saveDotsToFolder(nodes, "example1")
         assertEquals(1, nodes.size)
@@ -206,7 +210,7 @@ class GraphParserTests : ParserTests() {
         }
 
         val vertexA = outV { it.value == "A" }
-        val edgeB = edge { it.label == "B" }
+        val edgeB = outE { it.label == "B" }
         vertexA.view = "vA" // for debug
         edgeB.view = "eB"
         val s =
@@ -248,7 +252,7 @@ class GraphParserTests : ParserTests() {
             fix("x") { s ->
                 rule(
                     vertexEps() using { _ -> emptyList() },
-                    (edge { true } seq outV() seq s) using { e, v, rest: List<Pair<SimpleEdge, SimpleVertex>> ->
+                    (outE { true } seq outV() seq s) using { e, v, rest: List<Pair<SimpleEdge, SimpleVertex>> ->
                         listOf(Pair(e, v)) + rest
                     },
                 )
@@ -269,7 +273,7 @@ class GraphParserTests : ParserTests() {
         }
 
         val vertexA = outV { it.value == "A" }
-        val edgeB = edge { it.label == "B" }
+        val edgeB = outE { it.label == "B" }
         vertexA.view = "vA" // for debug
         edgeB.view = "eB"
         val s =
@@ -306,8 +310,8 @@ class GraphParserTests : ParserTests() {
         }
 
         val vertexA by outV { it.value == "A" }
-        val edgeB by edge { it.label == "B" }
-        val edgeC by edge { it.label == "C" }
+        val edgeB by outE { it.label == "B" }
+        val edgeC by outE { it.label == "C" }
         val s1: VVGraphParser<SimpleVertex, SimpleEdge, List<Pair<SimpleEdge, SimpleVertex>>>
                 by fix("s1") { s1 ->
                     rule(
@@ -347,7 +351,7 @@ class GraphParserTests : ParserTests() {
         }
 
         val vertexA by outV { it.value == "A" }
-        val edgeB by edge { it.label == "B" }
+        val edgeB by outE { it.label == "B" }
         vertexA.view = "vA"
         edgeB.view = "eB"
         val s by (edgeB seq vertexA).many
@@ -383,8 +387,8 @@ class GraphParserTests : ParserTests() {
 
         val person = v()
         val mary = outV { it.value == "Mary" }
-        val loves = edge { it.label == "loves" }
-        val friend = edge { it.label == "friend" }
+        val loves = outE { it.label == "loves" }
+        val friend = outE { it.label == "friend" }
         val maryLover = person.that(loves seq mary)
         val parser = maryLover seq friend seq outV()
         val trees = gr.applyParser(parser)

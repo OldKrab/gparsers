@@ -14,8 +14,6 @@ class DefaultNeo4jNode(id: Long, val labels: List<String>, val properties: Map<S
         val properties = properties.entries.joinToString(", ") { "\"${it.key}\"->\"${it.value}\"" }
         return "${DefaultNeo4jNode::class.simpleName}($labels) {$properties}"
     }
-
-
 }
 
 class DefaultNeo4jEdge(id: Long, val label: String, val properties: Map<String, Any>) : Neo4jEdge(id) {

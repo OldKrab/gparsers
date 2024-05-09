@@ -8,7 +8,10 @@ import org.parser.sppf.NonPackedNode
  */
 interface Graph<V, E> {
     /** Returns outgoing edges of vertex [v] if vertex present. */
-    fun getEdges(v: V): List<E>?
+    fun getOutgoingEdges(v: V): List<E>?
+
+    /** Returns incoming edges of vertex [v] if vertex present. */
+    fun getIncomingEdges(v: V): List<E>?
 
     /** Returns all vertexes of graph. */
     fun getVertexes(): Iterable<V>

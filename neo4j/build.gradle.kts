@@ -27,6 +27,9 @@ tasks.test {
 kotlin {
     jvmToolchain(11)
 }
+java {
+    withSourcesJar()
+}
 
 publishing {
     publications {

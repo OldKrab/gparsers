@@ -39,19 +39,27 @@ interface Neo4jGraphFactory<N : Neo4jNode, E : Neo4jEdge> {
 }
 
 open class Neo4jGraph<N : Neo4jNode, E : Neo4jEdge>(
-    private val db: GraphDatabaseService,
+    db: GraphDatabaseService,
     private val graphFactory: Neo4jGraphFactory<N, E>
 ) : Graph<N, E>, AutoCloseable {
 
     private val tx: Transaction = db.beginTx()
 
-    override fun getEdges(v: N): List<E>? {
+    override fun getOutgoingEdges(v: N): List<E>? {
         return try {
             tx.getNodeById(v.id).getRelationships(Direction.OUTGOING).map { graphFactory.createEdge(it) }
         } catch (_: NotFoundException) {
             null
         }
 
+    }
+
+    override fun getIncomingEdges(v: N): List<E>? {
+        return try {
+            tx.getNodeById(v.id).getRelationships(Direction.INCOMING).map { graphFactory.createEdge(it) }
+        } catch (_: NotFoundException) {
+            null
+        }
     }
 
     override fun getVertexes(): Iterable<N> {

@@ -29,7 +29,7 @@ class SimpleTest : BaseDefaultNeo4jTest() {
         val bVertex = vertexes.firstOrNull { it.labels.contains("B") }
         kotlin.test.assertNotNull(bVertex)
 
-        val edges = gr.getEdges(aVertex)
+        val edges = gr.getOutgoingEdges(aVertex)
         kotlin.test.assertNotNull(edges)
         assertEquals(1, edges.size)
         assertEquals("e", edges[0].label)

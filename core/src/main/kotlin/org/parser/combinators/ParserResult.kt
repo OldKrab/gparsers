@@ -2,9 +2,13 @@ package org.parser.combinators
 
 typealias Continuation<N> = (N) -> Unit
 
-private fun<T> memoK(k: Continuation<T>): Continuation<T> {
+private fun <T> memoK(k: Continuation<T>): Continuation<T> {
     val s = HashSet<T>()
-    return {t -> if (t !in s) {s += t; k(t) } }
+    return { t ->
+        if (t !in s) {
+            s += t; k(t)
+        }
+    }
 }
 
 /** The [ParserResult] class represent all results of parsing. It uses Continuation-passing style. */
@@ -64,25 +68,28 @@ value class ParserResult<T>(val invoke: (Trampoline, Continuation<T>) -> Unit) {
 
         /** Returns [ParserResult] that memoizes all continuations and calls them on any unique result returned by [res()][res].  */
         internal fun <T> memoResult(res: () -> ParserResult<T>): ParserResult<T> {
-            val results = LinkedHashSet<T>()
-            val continuations = ArrayList<Continuation<T>>()
+            var results: LinkedHashSet<T>? = null
+            var continuations: ArrayList<Continuation<T>>? = null
             return ParserResult { trampoline, k ->
-                if (continuations.isEmpty()) {
-                    continuations.add(k)
+                val capturedContinuations = continuations ?: ArrayList<Continuation<T>>(1)
+                continuations = capturedContinuations
+                if (capturedContinuations.isEmpty()) {
+                    capturedContinuations.add(k)
                     val p = res()
                     p.invoke(trampoline) { t ->
-                        if (!results.contains(t)) {
-                            results.add(t)
-                            for (continuation in continuations) {
+                        val capturedResults = results ?: LinkedHashSet<T>(1)
+                        results = capturedResults
+                        if (!capturedResults.contains(t)) {
+                            capturedResults.add(t)
+                            for (continuation in capturedContinuations) {
                                 trampoline.call { continuation(t) }
-
                             }
                         }
                     }
                 } else {
-                    continuations.add(k)
-                    for (r in results) {
-                        k(r)
+                    capturedContinuations.add(k)
+                    for (r in results ?: listOf()) {
+                        trampoline.call { k(r) }
                     }
                 }
             }
