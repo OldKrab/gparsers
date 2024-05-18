@@ -33,7 +33,7 @@ infix fun <In, Out1, R1, Out2, R2> BaseParser<In, Out1, R1>.seqr(p2: BaseParser<
 
 private fun <In, Out, R> BaseParser<In, Out, R>.rule1(head: BaseParser<In, Out, R>): BaseParser<In, Out, R> {
     val p = this
-    return Parser.memo(view) { sppf, inS ->
+    return Parser.new(view, !p.isMemoized) { sppf, inS ->
         p.parse(sppf, inS).map { t -> sppf.getIntermediateNode(head, t) }
     }
 }
@@ -42,23 +42,27 @@ private fun <In, Out, R> BaseParser<In, Out, R>.rule1(head: BaseParser<In, Out, 
 infix fun <In, Out, R> BaseParser<In, Out, R>.or(p2: BaseParser<In, Out, R>): BaseParser<In, Out, R> {
     val name = "${this.view} | ${p2.view}"
     return fix(name) { q ->
+        val left = this@or.rule1(q)
+        val right = p2.rule1(q)
         Parser.memo(name) { sppf, input ->
-            this.rule1(q).parse(sppf, input).orElse { p2.rule1(q).parse(sppf, input) }
+            left.parse(sppf, input).orElse { right.parse(sppf, input) }
         }
     }
 }
 
 /** Returns parser that combines results of all provided parsers. */
 fun <In, Out, R> rule(
-    p: BaseParser<In, Out, R>,
-    vararg parsers: BaseParser<In, Out, R>
+    first: BaseParser<In, Out, R>,
+    vararg rest: BaseParser<In, Out, R>
 ): BaseParser<In, Out, R> {
-    val name = "${p.view} ${parsers.joinToString { " | ${it.view}" }}"
+    val name = "${first.view} ${rest.joinToString { " | ${it.view}" }}"
     return fix(name) { q ->
+        val first_ = first.rule1(q)
+        val rest_ = rest.map{ it.rule1(q) }
         Parser.memo(name) { sppf, input ->
-            val firstRes = p.rule1(q).parse(sppf, input)
-            parsers.fold(firstRes) { acc, cur ->
-                acc.orElse { cur.rule1(q).parse(sppf, input) }
+            val firstRes = first_.parse(sppf, input)
+            rest_.fold(firstRes) { acc, cur ->
+                acc.orElse { cur.parse(sppf, input) }
             }
         }
     }
@@ -79,11 +83,10 @@ fun <In, Out, Out2, R, R2> BaseParser<In, Out, R>.that(constraint: BaseParser<Ou
 /** Returns parser that [f] returns. Same parser will be passed as argument of [f]. You can use it to define parser that uses itself.
  * @sample org.parser.samples.fixExample */
 fun <I, O, R> fix(name: String = "fix", f: (BaseParser<I, O, R>) -> BaseParser<I, O, R>): BaseParser<I, O, R> {
-    //TODO if q get name after fix, then f will use previous name of q
-    lateinit var p: BaseParser<I, O, R>
-    val q: Parser<I, O, R> = Parser.memo(name) { sppf, s -> p.parse(sppf, s) }
-    p = f(q)
-    return q
+    val p = LazyParser<I, O, R>()
+    p.p = f(p)
+    p.view = name
+    return p
 }
 
 /** Returns same parser where result of this parser will be replaced with [f]. */

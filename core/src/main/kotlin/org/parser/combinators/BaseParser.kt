@@ -4,9 +4,14 @@ import org.parser.sppf.NonPackedNode
 import org.parser.sppf.SPPFStorage
 import kotlin.reflect.KProperty
 
-interface BaseParser<InS, OutS, out R> {
-    fun parse(sppf: SPPFStorage, inS: InS): ParserResult<NonPackedNode<InS, OutS, R>>
-    var view: String
+/**
+ * The [BaseParser] used to parse any environment by defining [parse] function.
+ *
+ * @property parse Parses [InS] state using [SPPFStorage] to store SPPF nodes. Returns [ParserResult] with [NonPackedNode] nodes.
+ */
+abstract class BaseParser<InS, OutS, out R>(open val isMemoized: Boolean, open var view: String) {
+    abstract fun parse(sppf: SPPFStorage, inS: InS): ParserResult<NonPackedNode<InS, OutS, R>>
+
 
     /** Applies parser to [inState] state. */
     fun parseState(inState: InS): List<NonPackedNode<InS, OutS, R>> {
@@ -16,13 +21,16 @@ interface BaseParser<InS, OutS, out R> {
         return trees
     }
 
-    operator fun getValue(r: Any?, property: KProperty<*>): BaseParser<InS, OutS, R> {
+    open operator fun getValue(r: Any?, property: KProperty<*>): BaseParser<InS, OutS, R> {
         return this
     }
 
-    operator fun provideDelegate(thisRef: Any?, property: KProperty<*>): BaseParser<InS, OutS, R> {
+    open operator fun provideDelegate(thisRef: Any?, property: KProperty<*>): BaseParser<InS, OutS, R> {
         this.view = property.name
         return this
     }
 
+    override fun toString(): String {
+        return view
+    }
 }

@@ -89,6 +89,34 @@ interface GraphCombinators<V, E> {
         }
     }
 
+    fun throughOutE(p: (E) -> Boolean = { true }): BaseParser<VertexState<V, E>, VertexState<V, E>, E> {
+        return Parser.new("outE") { sppf, vState ->
+            val gr = vState.gr
+            val edges = gr.getOutgoingEdges(vState.v) ?: return@new ParserResult.failure()
+            edges
+                .filter { e -> p(e) }
+                .map { e ->
+                    val outV = gr.getEndEdgeVertex(e)!!
+                    ParserResult.success(sppf.getTerminalNode(vState, VertexState(gr, outV), e))
+                }
+                .fold(ParserResult.failure()) { acc, cur -> acc.orElse { cur } }
+        }
+    }
+
+    fun throughInE(p: (E) -> Boolean = { true }): BaseParser<VertexState<V, E>, VertexState<V, E>, E> {
+        return Parser.new("outE") { sppf, vState ->
+            val gr = vState.gr
+            val edges = gr.getIncomingEdges(vState.v) ?: return@new ParserResult.failure()
+            edges
+                .filter { e -> p(e) }
+                .map { e ->
+                    val inV = gr.getStartEdgeVertex(e)!!
+                    ParserResult.success(sppf.getTerminalNode(vState, VertexState(gr, inV), e))
+                }
+                .fold(ParserResult.failure()) { acc, cur -> acc.orElse { cur } }
+        }
+    }
+
     /** Returns edge parser that parses all incoming edges to a vertex in the [VertexState] that match [p]. */
     fun inE(p: (E) -> Boolean = { true }): BaseParser<VertexState<V, E>, EdgeState<V, E>, E> {
         return Parser.new("inE") { sppf, vState ->

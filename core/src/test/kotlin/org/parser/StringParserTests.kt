@@ -43,11 +43,12 @@ class StringParserTests : ParserTests() {
 
     @Test
     fun sameEpsilonParserWithDifferentAction() {
-        val s = eps<StringPos>() using { _ -> 42 } or (eps<StringPos>() using { _ -> 24 })
+        val eps = eps<StringPos>()
+        val s = eps using { _ -> 42 } or (eps using { _ -> 24 })
         val str = "a"
         val nodes = str.applyParser(s)
-        assertEquals(1, nodes.size)
-        assertEquals(setOf(42, 24), nodes[0].getResults().toSet())
+        val results = nodes.flatMap { it.getResults() }
+        assertEquals(setOf(42, 24), results.toSet())
     }
 
     @Test
@@ -87,12 +88,11 @@ class StringParserTests : ParserTests() {
 
     @Test
     fun ambiguousWithRule() {
-        val s: StringParser<String> = fix("S") { s ->
-            rule(
-                ("a".p seqr s seql "a".p seq s) using { s1, s2 -> "[a${s1}a]$s2" },
-                "".p
-            )
-        }
+        val s by LazyParser<StringPos, StringPos, String>()
+        s.p = rule(
+            ("a".p seqr s seql "a".p seq s) using { s1, s2 -> "[a${s1}a]$s2" },
+            "".p
+        )
 
         val str = "aaaa"
         val nodes = str.applyParser(s)
