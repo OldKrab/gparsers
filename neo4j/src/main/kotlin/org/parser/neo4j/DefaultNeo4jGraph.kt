@@ -43,9 +43,9 @@ class DefaultNeo4jGraphFactory() : Neo4jGraphFactory<DefaultNeo4jNode, DefaultNe
 
 class DefaultNeo4jGraph(db: GraphDatabaseService): Neo4jGraph<DefaultNeo4jNode, DefaultNeo4jEdge>(db, DefaultNeo4jGraphFactory())
 
-typealias DefaultStartState = StartState<DefaultNeo4jNode, DefaultNeo4jEdge>
-typealias DefaultVertexState = VertexState<DefaultNeo4jNode, DefaultNeo4jEdge>
-typealias DefaultEdgeState = EdgeState<DefaultNeo4jNode, DefaultNeo4jEdge>
+typealias DefaultNeo4jStartState = StartState<DefaultNeo4jNode, DefaultNeo4jEdge>
+typealias DefaultNeo4jVertexState = VertexState<DefaultNeo4jNode, DefaultNeo4jEdge>
+typealias DefaultNeo4jEdgeState = EdgeState<DefaultNeo4jNode, DefaultNeo4jEdge>
 
 object DefaultNeo4jCombinators : GraphCombinators<DefaultNeo4jNode, DefaultNeo4jEdge>
 

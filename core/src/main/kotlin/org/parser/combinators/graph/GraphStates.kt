@@ -1,5 +1,6 @@
 package org.parser.combinators.graph
 
+import org.parser.combinators.BaseParser
 import org.parser.combinators.Parser
 import kotlin.random.Random
 
@@ -22,7 +23,7 @@ data class EdgeState<V, E>(val gr: Graph<V, E>, val edge: E) {
     }
 }
 
-typealias VVGraphParser<V, E, R> = Parser<VertexState<V, E>, VertexState<V, E>, R>
-typealias VEGraphParser<V, E, R> = Parser<VertexState<V, E>, EdgeState<V, E>, R>
-typealias EVGraphParser<V, E, R> = Parser<EdgeState<V, E>, VertexState<V, E>, R>
-typealias EEGraphParser<V, E, R> = Parser<EdgeState<V, E>, EdgeState<V, E>, R>
+typealias VVGraphParser<V, E, R> = BaseParser<VertexState<V, E>, VertexState<V, E>, R>
+typealias VEGraphParser<V, E, R> = BaseParser<VertexState<V, E>, EdgeState<V, E>, R>
+typealias EVGraphParser<V, E, R> = BaseParser<EdgeState<V, E>, VertexState<V, E>, R>
+typealias EEGraphParser<V, E, R> = BaseParser<EdgeState<V, E>, EdgeState<V, E>, R>

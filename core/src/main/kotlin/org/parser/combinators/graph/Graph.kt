@@ -1,5 +1,6 @@
 package org.parser.combinators.graph
 
+import org.parser.combinators.BaseParser
 import org.parser.combinators.Parser
 import org.parser.sppf.NonPackedNode
 
@@ -16,13 +17,19 @@ interface Graph<V, E> {
     /** Returns all vertexes of graph. */
     fun getVertexes(): Iterable<V>
 
-    /** Returns start and end vertexes of edge [e] if edge present. */
-    fun getEdgeVertexes(e: E): Pair<V, V>?
+    /** Returns all edges of graph. */
+    fun getEdges(): Iterable<E>
+
+    /** Returns start vertex of edge [e] if edge present. */
+    fun getStartEdgeVertex(e: E): V?
+
+    /** Returns end vertex of edge [e] if edge present. */
+    fun getEndEdgeVertex(e: E): V?
 
     /**
      * Applies parser to graph from every vertex. Parser should accept state [StartState].
      * @return list of [NonPackedNode]. */
-    fun <O, R> applyParser(parser: Parser<StartState<V, E>, O, R>): List<NonPackedNode<StartState<V, E>, O, R>> {
+    fun <O, R> applyParser(parser: BaseParser<StartState<V, E>, O, R>): List<NonPackedNode<StartState<V, E>, O, R>> {
         return parser.parseState(StartState(this))
     }
 }

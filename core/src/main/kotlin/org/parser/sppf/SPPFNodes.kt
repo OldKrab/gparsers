@@ -1,5 +1,6 @@
 package org.parser.sppf
 
+import org.parser.combinators.BaseParser
 import org.parser.combinators.Parser
 import java.util.*
 import kotlin.collections.ArrayList
@@ -39,7 +40,7 @@ sealed class NonPackedNode<LS, RS, out R>(val leftState: LS, val rightState: RS)
 
 
 open class IntermediateNode<LS, RS, R, CR1, CR2>(
-    val parser: Parser<LS, RS, *>,
+    val parser: BaseParser<LS, RS, *>,
     leftState: LS,
     rightState: RS,
     val action: (Pair<CR1?, CR2>) -> R
@@ -62,9 +63,7 @@ open class IntermediateNode<LS, RS, R, CR1, CR2>(
         return packedNodes.asSequence().flatMap { it.getResults() }.map { action(it) }
     }
 
-    override fun hashCode(): Int {
-        return Objects.hash(parser, leftState, rightState)
-    }
+
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -78,12 +77,23 @@ open class IntermediateNode<LS, RS, R, CR1, CR2>(
 
         return true
     }
+
+    var hash: Int? = null
+    override fun hashCode(): Int {
+        val _hash = hash
+        if(_hash != null) return _hash
+        var result = parser.hashCode()
+        result = 31 * result + leftState.hashCode()
+        result = 31 * result + rightState.hashCode()
+        hash = result
+        return result
+    }
 }
 
 
 class NonTerminalNode<LS, RS, R, CR>(
     val nt: String,
-    val parser: Parser<LS, RS, CR>,
+    val parser: BaseParser<LS, RS, CR>,
     leftState: LS,
     rightState: RS,
     val action: (CR) -> R

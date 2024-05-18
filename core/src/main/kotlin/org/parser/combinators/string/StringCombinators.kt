@@ -1,5 +1,6 @@
 package org.parser.combinators.string
 
+import org.parser.combinators.BaseParser
 import org.parser.combinators.Parser
 import org.parser.combinators.ParserResult
 import org.parser.sppf.NonPackedNode
@@ -12,7 +13,7 @@ data class StringPos(val str: String, val pos: Int) {
     }
 }
 
-typealias StringParser<R> = Parser<StringPos, StringPos, R>
+typealias StringParser<R> = BaseParser<StringPos, StringPos, R>
 
 /**
  * Applies parser to the string from the beginning.

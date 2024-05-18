@@ -3,17 +3,18 @@ package org.parser.combinators
 typealias Continuation<N> = (N) -> Unit
 
 private fun <T> memoK(k: Continuation<T>): Continuation<T> {
-    val s = HashSet<T>()
-    return { t ->
-        if (t !in s) {
-            s += t; k(t)
-        }
-    }
+    return k
+//    val s = HashSet<T>()
+//    return { t ->
+//        if (t !in s) {
+//            s += t; k(t)
+//        }
+//    }
 }
 
 /** The [ParserResult] class represent all results of parsing. It uses Continuation-passing style. */
 @JvmInline
-value class ParserResult<T>(val invoke: (Trampoline, Continuation<T>) -> Unit) {
+value class ParserResult<out T>(val invoke: (Trampoline, Continuation<T>) -> Unit) {
 
     fun getResults(): List<T> {
         val results = ArrayList<T>()
@@ -51,17 +52,9 @@ value class ParserResult<T>(val invoke: (Trampoline, Continuation<T>) -> Unit) {
         }
     }
 
-    /** Combines results with [ParserResult] that [nextRes] returns. */
-    fun orElse(nextRes: () -> ParserResult<T>): ParserResult<T> {
-        return ParserResult { trampoline, k ->
-            trampoline.call { this.invoke(trampoline, k) }
-            trampoline.call { nextRes().invoke(trampoline, k) }
-        }
-    }
-
     companion object {
         /** Returns [ParserResult] that contains only [t] result. */
-        fun <T> success(t: T): ParserResult<T> = ParserResult { trampoline, k -> k(t) }
+        fun <T> success(t: T): ParserResult<T> = ParserResult { _, k -> k(t) }
 
         /** Returns [ParserResult] that contains no results. */
         fun <T> failure(): ParserResult<T> = ParserResult { _, _ -> }
@@ -94,6 +87,14 @@ value class ParserResult<T>(val invoke: (Trampoline, Continuation<T>) -> Unit) {
                 }
             }
         }
+    }
+}
+
+/** Combines results with [ParserResult] that [nextRes] returns. */
+fun <T>  ParserResult<T>.orElse(nextRes: () -> ParserResult<T>): ParserResult<T> {
+    return ParserResult { trampoline, k ->
+        trampoline.call { this.invoke(trampoline, k) }
+        trampoline.call { nextRes().invoke(trampoline, k) }
     }
 }
 

@@ -45,10 +45,15 @@ private class SimpleGraph : Graph<SimpleVertex, SimpleEdge> {
     override fun getIncomingEdges(v: SimpleVertex): List<SimpleEdge>? = vertexesInEdges[v]
 
     override fun getVertexes(): Set<SimpleVertex> = vertexes
-    override fun getEdgeVertexes(e: SimpleEdge): Pair<SimpleVertex, SimpleVertex>? = edgeVertexes[e]
+    override fun getEdges(): Iterable<SimpleEdge> = edgeVertexes.keys
+    override fun getEndEdgeVertex(e: SimpleEdge): SimpleVertex? = edgeVertexes[e]?.second
+    override fun getStartEdgeVertex(e: SimpleEdge): SimpleVertex?  = edgeVertexes[e]?.first
 }
 
 private object TestCombinators : GraphCombinators<SimpleVertex, SimpleEdge>
+private typealias SimpleVertexState = VertexState<SimpleVertex, SimpleEdge>
+private typealias SimpleEdgeState = EdgeState<SimpleVertex, SimpleEdge>
+private typealias SimpleStartState = StartState<SimpleVertex, SimpleEdge>
 
 class GraphParserTests : ParserTests() {
     @Test
@@ -99,9 +104,9 @@ class GraphParserTests : ParserTests() {
             addEdge(nA, eC, nA)
         }
 
-        val nodeA by v { it.value == "A" }
-        val edgeB by outE { it.label == "B" }
-        val edgeC by outE { it.label == "C" }
+        val nodeA = v { it.value == "A" }
+        val edgeB = outE { it.label == "B" }
+        val edgeC = outE { it.label == "C" }
 
         val parser = nodeA seq (edgeB or edgeC)
 
@@ -125,12 +130,12 @@ class GraphParserTests : ParserTests() {
         }
 
         val isA: (SimpleVertex) -> Boolean = { it.value == "A" }
-        val edgeB by outE { it.label == "B" }
-        val edgeC by outE { it.label == "C" }
-        val vertexA by outV(isA)
-        val startVertexA by v(isA)
+        val edgeB = outE { it.label == "B" }
+        val edgeC = outE { it.label == "C" }
+        val vertexA = outV(isA)
+        val startVertexA = v(isA)
 
-        val p by startVertexA seq ((edgeB or edgeC) seq vertexA).many
+        val p = startVertexA seq ((edgeB or edgeC) seq vertexA).many
         val nodes = gr.applyParser(p)
         saveDotsToFolder(nodes, "many")
 
@@ -201,6 +206,55 @@ class GraphParserTests : ParserTests() {
         assertEquals(setOf(mary), nodes[0].getResults().toSet())
     }
 
+
+    @Test
+    fun loopWithLazy() {
+        val vA = SimpleVertex("A")
+        val eB = SimpleEdge("B")
+        val gr = SimpleGraph().apply {
+            addEdge(vA, eB, vA)
+        }
+
+        val vertexA = outV { it.value == "A" }
+        val edgeB = outE { it.label == "B" }
+        vertexA.view = "vA" // for debug
+        edgeB.view = "eB"
+        val s = LazyParser<SimpleVertexState, SimpleVertexState, List<Pair<SimpleEdge, SimpleVertex>>>()
+        s.p = rule(
+            vertexEps() using { _ -> emptyList() },
+            (edgeB seq vertexA seq s) using { e, v, rest -> listOf(Pair(e, v)) + rest },
+        )
+
+        val nodes = s.parseState(VertexState(gr, SimpleVertex("A")))
+        saveDotsToFolder(nodes, "loopWithLazy")
+
+        assertEquals(1, nodes.size)
+        val results = nodes[0].getResults().take(3).toSet()
+        assertEquals(
+            setOf(
+                listOf(),
+                listOf(Pair(eB, vA)),
+                listOf(Pair(eB, vA), Pair(eB, vA)),
+            ), results.toSet()
+        )
+
+    }
+
+    @Test
+    fun lookup(){
+        val vA = SimpleVertex("A")
+        val eB = SimpleEdge("B")
+        val gr = SimpleGraph().apply {
+            addEdge(vA, eB, vA)
+        }
+
+        val p = lookup(v())
+        val p2 = (v() seq outE() seq outV()) using { v, e, u -> Unit }
+        val nodes = gr.applyParser(p)
+        val res = nodes.flatMap { it.getResults() }
+        println(res[0])
+    }
+
     @Test
     fun loopWithFix() {
         val vA = SimpleVertex("A")
@@ -235,6 +289,7 @@ class GraphParserTests : ParserTests() {
             ), results.toSet()
         )
     }
+
 
     @Test
     fun testStackOverflow() {
@@ -309,24 +364,22 @@ class GraphParserTests : ParserTests() {
             addEdge(vA, eC, vA)
         }
 
-        val vertexA by outV { it.value == "A" }
-        val edgeB by outE { it.label == "B" }
-        val edgeC by outE { it.label == "C" }
-        val s1: VVGraphParser<SimpleVertex, SimpleEdge, List<Pair<SimpleEdge, SimpleVertex>>>
-                by fix("s1") { s1 ->
-                    rule(
-                        (s1 seq edgeB seq vertexA) using { prefix, e, v -> prefix + Pair(e, v) },
-                        vertexEps() using { _ -> emptyList() }
-                    )
-                }
-        val s2: VVGraphParser<SimpleVertex, SimpleEdge, List<Pair<SimpleEdge, SimpleVertex>>>
-                by fix("s2") { s2 ->
-                    rule(
-                        (s2 seq edgeC seq vertexA) using { prefix, e, v -> prefix + Pair(e, v) },
-                        vertexEps() using { _ -> emptyList() }
-                    )
-                }
-        val s by s1 or s2
+        val vertexA = outV { it.value == "A" }
+        val edgeB = outE { it.label == "B" }
+        val edgeC = outE { it.label == "C" }
+        val s1: VVGraphParser<SimpleVertex, SimpleEdge, List<Pair<SimpleEdge, SimpleVertex>>> = fix("s1") { s1 ->
+            rule(
+                (s1 seq edgeB seq vertexA) using { prefix, e, v -> prefix + Pair(e, v) },
+                vertexEps() using { _ -> emptyList() }
+            )
+        }
+        val s2: VVGraphParser<SimpleVertex, SimpleEdge, List<Pair<SimpleEdge, SimpleVertex>>> = fix("s2") { s2 ->
+            rule(
+                (s2 seq edgeC seq vertexA) using { prefix, e, v -> prefix + Pair(e, v) },
+                vertexEps() using { _ -> emptyList() }
+            )
+        }
+        val s = s1 or s2
 
         val nodes = s.parseState(VertexState(gr, vA))
         saveDotsToFolder(nodes, "loopLeftRec2")
@@ -351,10 +404,10 @@ class GraphParserTests : ParserTests() {
         }
 
         val vertexA by outV { it.value == "A" }
-        val edgeB by outE { it.label == "B" }
+        val edgeB = outE { it.label == "B" }
         vertexA.view = "vA"
         edgeB.view = "eB"
-        val s by (edgeB seq vertexA).many
+        val s = (edgeB seq vertexA).many
 
         val nodes = s.parseState(VertexState(gr, SimpleVertex("A")))
         saveDotsToFolder(nodes, "loopWithMany")

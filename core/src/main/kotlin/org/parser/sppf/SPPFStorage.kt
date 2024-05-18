@@ -1,5 +1,6 @@
 package org.parser.sppf
 
+import org.parser.combinators.BaseParser
 import org.parser.combinators.Parser
 import java.nio.file.Files
 import java.nio.file.Path
@@ -35,7 +36,7 @@ class SPPFStorage {
 
     @Suppress("UNCHECKED_CAST")
     fun <LS, MS, RS, R1, R2> getIntermediateNode(
-        parser: Parser<LS, RS, Pair<R1, R2>>,
+        parser: BaseParser<LS, RS, Pair<R1, R2>>,
         leftChild: NonPackedNode<LS, MS, R1>,
         rightChild: NonPackedNode<MS, RS, R2>
     ): NonPackedNode<LS, RS, Pair<R1, R2>> {
@@ -49,7 +50,7 @@ class SPPFStorage {
 
     @Suppress("UNCHECKED_CAST")
     fun <LS, RS, R> getIntermediateNode(
-        parser: Parser<LS, RS, R>,
+        parser: BaseParser<LS, RS, R>,
         child: NonPackedNode<LS, RS, R>
     ): NonPackedNode<LS, RS, R> {
         val leftState = child.leftState
@@ -64,7 +65,7 @@ class SPPFStorage {
     @Suppress("UNCHECKED_CAST")
     fun <LS, RS, R> getNonTerminalNode(
         nt: String,
-        parser: Parser<LS, RS, R>,
+        parser: BaseParser<LS, RS, R>,
         child: NonPackedNode<LS, RS, R>,
     ): NonPackedNode<LS, RS, R> {
         val leftState = child.leftState

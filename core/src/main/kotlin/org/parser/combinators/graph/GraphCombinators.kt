@@ -1,8 +1,6 @@
 package org.parser.combinators.graph
 
-import org.parser.combinators.Parser
-import org.parser.combinators.ParserResult
-import org.parser.combinators.eps
+import org.parser.combinators.*
 import org.parser.sppf.NonPackedNode
 import org.parser.sppf.SPPFStorage
 
@@ -13,45 +11,57 @@ import org.parser.sppf.SPPFStorage
  * @sample org.parser.samples.SimpleCombinators
  */
 interface GraphCombinators<V, E> {
-
     /** Returns epsilon parser that accept [EdgeState]. */
-    fun edgeEps(): Parser<EdgeState<V, E>, EdgeState<V, E>, Unit> {
+    fun edgeEps(): BaseParser<EdgeState<V, E>, EdgeState<V, E>, Unit> {
         return eps()
     }
 
     /** Returns epsilon parser that accept [VertexState]. */
-    fun vertexEps(): Parser<VertexState<V, E>, VertexState<V, E>, Unit> {
+    fun vertexEps(): BaseParser<VertexState<V, E>, VertexState<V, E>, Unit> {
         return eps()
     }
 
     /** Returns vertex parser that parses outgoing vertex of [EdgeState]'s edge if vertex match [p]. */
-    fun outV(p: (V) -> Boolean = { true }): Parser<EdgeState<V, E>, VertexState<V, E>, V> {
-        return Parser.memo("outV") { sppf, edgeState ->
+    fun outV(p: (V) -> Boolean = { true }): BaseParser<EdgeState<V, E>, VertexState<V, E>, V> {
+        return Parser.new("outV") { sppf, edgeState ->
             val gr = edgeState.gr
-            val (_, outV) = gr.getEdgeVertexes(edgeState.edge) ?: return@memo ParserResult.failure()
-            if (!p(outV)) return@memo ParserResult.failure()
+            val outV = gr.getEndEdgeVertex(edgeState.edge) ?: return@new ParserResult.failure()
+            if (!p(outV)) return@new ParserResult.failure()
             ParserResult.success(sppf.getTerminalNode(edgeState, VertexState(gr, outV), outV))
         }
     }
 
     /** Returns vertex parser that parses incoming vertex of [EdgeState]'s edge if vertex match [p]. */
-    fun inV(p: (V) -> Boolean = { true }): Parser<EdgeState<V, E>, VertexState<V, E>, V> {
-        return Parser.memo("inV") { sppf, edgeState ->
+    fun inV(p: (V) -> Boolean = { true }): BaseParser<EdgeState<V, E>, VertexState<V, E>, V> {
+        return Parser.new("inV") { sppf, edgeState ->
             val gr = edgeState.gr
-            val (inV, _) = gr.getEdgeVertexes(edgeState.edge) ?: return@memo ParserResult.failure()
-            if (!p(inV)) return@memo ParserResult.failure()
+            val inV = gr.getStartEdgeVertex(edgeState.edge) ?: return@new ParserResult.failure()
+            if (!p(inV)) return@new ParserResult.failure()
             ParserResult.success(sppf.getTerminalNode(edgeState, VertexState(gr, inV), inV))
         }
     }
 
     /** Returns vertex parser that parses all vertexes of graph that match [p]. Parser accept [StartState]. */
-    fun v(p: (V) -> Boolean = { true }): Parser<StartState<V, E>, VertexState<V, E>, V> {
-        return Parser.memo("v") { sppf, startState ->
+    fun v(p: (V) -> Boolean = { true }): BaseParser<StartState<V, E>, VertexState<V, E>, V> {
+        return Parser.new("v") { sppf, startState ->
             val gr = startState.gr
             gr.getVertexes()
                 .filter { p(it) }
                 .map {
                     ParserResult.success(sppf.getTerminalNode(startState, VertexState(gr, it), it))
+                }
+                .fold(ParserResult.failure()) { acc, cur -> acc.orElse { cur } }
+        }
+    }
+
+    /** Returns edge parser that parses all edges of graph that match [p]. Parser accept [StartState]. */
+    fun edge(p: (E) -> Boolean = { true }): BaseParser<StartState<V, E>, EdgeState<V, E>, E> {
+        return Parser.new("v") { sppf, startState ->
+            val gr = startState.gr
+            gr.getEdges()
+                .filter { p(it) }
+                .map {
+                    ParserResult.success(sppf.getTerminalNode(startState, EdgeState(gr, it), it))
                 }
                 .fold(ParserResult.failure()) { acc, cur -> acc.orElse { cur } }
         }
@@ -71,19 +81,19 @@ interface GraphCombinators<V, E> {
     }
 
     /** Returns edge parser that parses all outgoing edges from a vertex in the [VertexState] that match [p]. */
-    fun outE(p: (E) -> Boolean): Parser<VertexState<V, E>, EdgeState<V, E>, E> {
-        return Parser.memo("outE") { sppf, vState ->
+    fun outE(p: (E) -> Boolean = { true }): BaseParser<VertexState<V, E>, EdgeState<V, E>, E> {
+        return Parser.new("outE") { sppf, vState ->
             val gr = vState.gr
-            val edges = gr.getOutgoingEdges(vState.v) ?: return@memo ParserResult.failure()
+            val edges = gr.getOutgoingEdges(vState.v) ?: return@new ParserResult.failure()
             edgesParserResult(edges, sppf, vState, p)
         }
     }
 
     /** Returns edge parser that parses all incoming edges to a vertex in the [VertexState] that match [p]. */
-    fun inE(p: (E) -> Boolean): Parser<VertexState<V, E>, EdgeState<V, E>, E> {
-        return Parser.memo("inE") { sppf, vState ->
+    fun inE(p: (E) -> Boolean = { true }): BaseParser<VertexState<V, E>, EdgeState<V, E>, E> {
+        return Parser.new("inE") { sppf, vState ->
             val gr = vState.gr
-            val edges = gr.getIncomingEdges(vState.v) ?: return@memo ParserResult.failure()
+            val edges = gr.getIncomingEdges(vState.v) ?: return@new ParserResult.failure()
             edgesParserResult(edges, sppf, vState, p)
         }
     }

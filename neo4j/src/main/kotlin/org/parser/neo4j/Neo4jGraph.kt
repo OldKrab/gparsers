@@ -61,17 +61,26 @@ open class Neo4jGraph<N : Neo4jNode, E : Neo4jEdge>(
             null
         }
     }
-
+    override fun getEdges(): Iterable<E> {
+        return tx.allRelationships.asSequence().map { graphFactory.createEdge(it) }.asIterable()
+    }
     override fun getVertexes(): Iterable<N> {
         return tx.allNodes.asSequence().map { graphFactory.createNode(it) }.asIterable()
     }
 
-    override fun getEdgeVertexes(e: E): Pair<N, N>? {
+    override fun getStartEdgeVertex(e: E): N? {
         return try {
-            val nodes = tx.getRelationshipById(e.id).nodes
-            val first = graphFactory.createNode(nodes[0])
-            val last = graphFactory.createNode(nodes[1])
-            return Pair(first, last)
+            val node = tx.getRelationshipById(e.id).startNode
+            return graphFactory.createNode(node)
+        } catch (_: NotFoundException) {
+            null
+        }
+    }
+
+    override fun getEndEdgeVertex(e: E): N? {
+        return try {
+            val node = tx.getRelationshipById(e.id).endNode
+            return graphFactory.createNode(node)
         } catch (_: NotFoundException) {
             null
         }

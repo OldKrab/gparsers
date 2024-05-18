@@ -3,7 +3,9 @@ package org.parser.neo4j
 import org.junit.jupiter.api.Assertions.*
 import org.neo4j.graphdb.GraphDatabaseService
 import org.neo4j.graphdb.Label
+import org.parser.combinators.graph.GraphCombinators
 import kotlin.test.assertContains
+import org.parser.neo4j.DefaultNeo4jCombinators
 
 class SimpleTest : BaseDefaultNeo4jTest() {
 
@@ -28,7 +30,6 @@ class SimpleTest : BaseDefaultNeo4jTest() {
         assertEquals("value", aVertex.properties["key"])
         val bVertex = vertexes.firstOrNull { it.labels.contains("B") }
         kotlin.test.assertNotNull(bVertex)
-
         val edges = gr.getOutgoingEdges(aVertex)
         kotlin.test.assertNotNull(edges)
         assertEquals(1, edges.size)
