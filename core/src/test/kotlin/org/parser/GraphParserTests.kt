@@ -7,8 +7,14 @@ import org.parser.TestCombinators.v
 import org.parser.TestCombinators.vertexEps
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import org.parser.TestCombinators.ePred
+import org.parser.TestCombinators.inE
+import org.parser.TestCombinators.inV
+import org.parser.TestCombinators.vPred
 import org.parser.combinators.graph.*
 import org.parser.combinators.*
+import java.util.*
+import kotlin.collections.ArrayList
 
 private data class SimpleVertex(val value: String) {
     override fun toString(): String {
@@ -23,10 +29,10 @@ private data class SimpleEdge(val label: String) {
 }
 
 private class SimpleGraph : Graph<SimpleVertex, SimpleEdge> {
-    private val vertexesOutEdges = HashMap<SimpleVertex, MutableList<SimpleEdge>>()
-    private val vertexesInEdges = HashMap<SimpleVertex, MutableList<SimpleEdge>>()
-    private val edgeVertexes = HashMap<SimpleEdge, Pair<SimpleVertex, SimpleVertex>>()
-    private val vertexes = HashSet<SimpleVertex>()
+    private val vertexesOutEdges = IdentityHashMap<SimpleVertex, MutableList<SimpleEdge>>()
+    private val vertexesInEdges = IdentityHashMap<SimpleVertex, MutableList<SimpleEdge>>()
+    private val edgeVertexes = IdentityHashMap<SimpleEdge, Pair<SimpleVertex, SimpleVertex>>()
+    private val vertexes: MutableSet<SimpleVertex> = Collections.newSetFromMap(IdentityHashMap())
 
     fun addVertex(value: SimpleVertex): SimpleVertex {
         vertexes.add(value)
@@ -41,13 +47,17 @@ private class SimpleGraph : Graph<SimpleVertex, SimpleEdge> {
         edgeVertexes[e] = Pair(u, v)
     }
 
+    fun addEdge(u: SimpleVertex, e: String, v: SimpleVertex) {
+       addEdge(u, SimpleEdge(e), v)
+    }
+
     override fun getOutgoingEdges(v: SimpleVertex): List<SimpleEdge>? = vertexesOutEdges[v]
     override fun getIncomingEdges(v: SimpleVertex): List<SimpleEdge>? = vertexesInEdges[v]
 
     override fun getVertexes(): Set<SimpleVertex> = vertexes
     override fun getEdges(): Iterable<SimpleEdge> = edgeVertexes.keys
     override fun getEndEdgeVertex(e: SimpleEdge): SimpleVertex? = edgeVertexes[e]?.second
-    override fun getStartEdgeVertex(e: SimpleEdge): SimpleVertex?  = edgeVertexes[e]?.first
+    override fun getStartEdgeVertex(e: SimpleEdge): SimpleVertex? = edgeVertexes[e]?.first
 }
 
 private object TestCombinators : GraphCombinators<SimpleVertex, SimpleEdge>
@@ -225,7 +235,7 @@ class GraphParserTests : ParserTests() {
             (edgeB seq vertexA seq s) using { e, v, rest -> listOf(Pair(e, v)) + rest },
         )
 
-        val nodes = s.parseState(VertexState(gr, SimpleVertex("A")))
+        val nodes = s.parseState(VertexState(gr, vA))
         saveDotsToFolder(nodes, "loopWithLazy")
 
         assertEquals(1, nodes.size)
@@ -241,7 +251,7 @@ class GraphParserTests : ParserTests() {
     }
 
     @Test
-    fun lookup(){
+    fun lookup() {
         val vA = SimpleVertex("A")
         val eB = SimpleEdge("B")
         val gr = SimpleGraph().apply {
@@ -276,7 +286,8 @@ class GraphParserTests : ParserTests() {
                     },
                 )
             }
-        val nodes = s.parseState(VertexState(gr, SimpleVertex("A")))
+        val s2 =  fix { s -> s seq outE() seq outV() }
+        val nodes = s.parseState(VertexState(gr, vA))
         saveDotsToFolder(nodes, "loopWithFix")
 
         assertEquals(1, nodes.size)
@@ -340,7 +351,7 @@ class GraphParserTests : ParserTests() {
                     vertexEps() using { _ -> emptyList() },
                 )
             }
-        val nodes = s.parseState(VertexState(gr, SimpleVertex("A")))
+        val nodes = s.parseState(VertexState(gr, vA))
         saveDotsToFolder(nodes, "loopLeftRec")
 
         assertEquals(1, nodes.size)
@@ -409,7 +420,7 @@ class GraphParserTests : ParserTests() {
         edgeB.view = "eB"
         val s = (edgeB seq vertexA).many
 
-        val nodes = s.parseState(VertexState(gr, SimpleVertex("A")))
+        val nodes = s.parseState(VertexState(gr, vA))
         saveDotsToFolder(nodes, "loopWithMany")
 
         assertEquals(1, nodes.size)
@@ -427,27 +438,32 @@ class GraphParserTests : ParserTests() {
     @Test
     fun withThat() {
         val danV = SimpleVertex("Dan")
-        val friendE = SimpleEdge("friend")
-        val lindaV = SimpleVertex("Linda")
+        val johnV = SimpleVertex("John")
         val gr = SimpleGraph().apply {
-            val loves = SimpleEdge("loves")
-            val john = SimpleVertex("John")
-            val mary = SimpleVertex("Mary")
-            addEdge(danV, friendE, john)
-            addEdge(danV, loves, mary)
-            addEdge(john, friendE, lindaV)
+            val lindaV = SimpleVertex("Linda")
+            val maryV = SimpleVertex("Mary")
+            addEdge(danV, "friend", johnV)
+            addEdge(danV, "loves", maryV)
+            addEdge(maryV, "loves", danV)
+            addEdge(johnV, "loves", maryV)
+            addEdge(johnV, "friend", lindaV)
         }
 
         val person = v()
-        val mary = outV { it.value == "Mary" }
-        val loves = outE { it.label == "loves" }
+        val isMary = vPred { v -> v.value == "Mary" }
+        val isLoves = ePred { e -> e.label == "loves" }
+        val marysLover = person
+            .that(outE(isLoves) seq outV(isMary))
+            .that(inE(isLoves) seq inV(isMary))
         val friend = outE { it.label == "friend" }
-        val maryLover = person.that(loves seq mary)
-        val parser = maryLover seq friend seq outV()
-        val trees = gr.applyParser(parser)
+        val marysLoversFriend = marysLover seq friend seq outV()
+
+        val trees = gr.applyParser(marysLoversFriend)
         assertEquals(1, trees.size)
         val res = trees[0].getResults().toList()
-        assertEquals(listOf(Pair(Pair(danV, friendE), lindaV)), res)
+
+        val friendE = SimpleEdge("friend")
+        assertEquals(listOf(Pair(Pair(danV, friendE), johnV)), res)
     }
 
 }

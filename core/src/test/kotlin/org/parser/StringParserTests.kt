@@ -148,17 +148,15 @@ class StringParserTests : ParserTests() {
 
     @Test
     fun expressions() {
-        val num = "[0-9]*".toRegex().p using { it.toInt() }
-        val e = fix("e") { e ->
-            rule(
-                e seql "+".p seq e using { x: Int, y: Int -> x + y },
-                e seql "-".p seq e using { x: Int, y: Int -> x - y },
-                "(".p seqr e seql ")".p,
-                num,
-            )
-        }
+        val expr = LazyParser<StringPos, StringPos, Int>()
+        expr.p = rule(
+            expr seql "+".p seq expr using { x: Int, y: Int -> x + y },
+            expr seql "-".p seq expr using { x: Int, y: Int -> x - y },
+            "(".p seqr expr seql ")".p,
+            "[0-9]*".toRegex().p using { it.toInt() }
+        )
         val str = "10+(20-5)"
-        val nodes = str.applyParser(e).filter { it.rightState.pos == str.length }
+        val nodes = str.applyParser(expr).filter { it.rightState.pos == str.length }
         assertEquals(1, nodes.size)
         assertEquals(listOf(25), nodes[0].getResults().toList())
     }

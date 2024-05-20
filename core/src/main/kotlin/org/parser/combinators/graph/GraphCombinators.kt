@@ -11,6 +11,12 @@ import org.parser.sppf.SPPFStorage
  * @sample org.parser.samples.SimpleCombinators
  */
 interface GraphCombinators<V, E> {
+    /** Creates predicate from function. Useful when you don't want to write type label of [V]  */
+    fun vPred(f: (V) -> Boolean): (V) -> Boolean = f
+
+    /** Creates predicate from function. Useful when you don't want to write type label of [E]  */
+    fun ePred(f: (E) -> Boolean): (E) -> Boolean = f
+
     /** Returns epsilon parser that accept [EdgeState]. */
     fun edgeEps(): BaseParser<EdgeState<V, E>, EdgeState<V, E>, Unit> {
         return eps()
