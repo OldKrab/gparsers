@@ -8,7 +8,6 @@ import org.parser.sppf.SPPFStorage
  * Contains parser combinators for graphs.
  *
  * You should instantiate this interface with your vertex and edge types.
- * @sample org.parser.samples.SimpleCombinators
  */
 interface GraphCombinators<V, E> {
     /** Creates predicate from function. Useful when you don't want to write type label of [V]  */

@@ -6,12 +6,12 @@ import org.parser.combinators.string.StringParser
 import org.parser.combinators.string.applyParser
 import org.parser.combinators.string.p
 import org.junit.jupiter.api.Test
+import org.parser.ParserTests.saveDotsToFolder
 import org.parser.combinators.*
 import org.parser.combinators.string.StringPos
 
 
-class StringParserTests : ParserTests() {
-
+class StringParserTests {
     @Test
     fun simple() {
         val s = "a".p
@@ -65,6 +65,13 @@ class StringParserTests : ParserTests() {
         val results = nodes.map { it.getResults() }
         assertEquals(1, results.size)
         assertEquals(setOf("[aa]", "[a][a]"), results[0].toSet())
+
+        val expr = LazyParser<StringPos, StringPos, Int>()
+        expr.p = rule(
+            (expr seql "+".p seq expr) using { x, y -> x + y },
+            (expr seql "−".p seq expr) using { x, y -> x - y },
+            "(".p seqr expr seql ")".p,
+            "[0−9]*".toRegex().p using { it.toInt() })
     }
 
     @Test

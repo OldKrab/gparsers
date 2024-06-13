@@ -11,8 +11,10 @@ class LazyParser<InS, OutS, R> : BaseParser<InS, OutS, R>(false, "lazy") {
     lateinit var p: BaseParser<InS, OutS, R>
 
     override var view: String = "lazy"
-        get() = if (::p.isInitialized) p.view else field
+        get() = if (field != "lazy" || !::p.isInitialized) field else p.view
         set(value) {
+            if (::p.isInitialized)
+                p.view = value
             field = value
         }
 

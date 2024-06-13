@@ -13,12 +13,17 @@ abstract class BaseParser<InS, OutS, out R>(open val isMemoized: Boolean, open v
     abstract fun parse(sppf: SPPFStorage, inS: InS): ParserResult<NonPackedNode<InS, OutS, R>>
 
 
-    /** Applies parser to [inState] state. */
+    /** Applies parser to [inState] state. Returns SPPF nodes. */
     fun parseState(inState: InS): List<NonPackedNode<InS, OutS, R>> {
         val sppf = SPPFStorage()
         val res = this.parse(sppf, inState)
         val trees = res.getResults()
         return trees
+    }
+
+    /** Applies parser to [inState] state. Returns [Sequence] of results. */
+    fun parseStateForResults(inState: InS): Sequence<R> {
+        return parseState(inState).asSequence().flatMap { it.getResults() }
     }
 
     open operator fun getValue(r: Any?, property: KProperty<*>): BaseParser<InS, OutS, R> {

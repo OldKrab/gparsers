@@ -80,12 +80,11 @@ fun <In, Out, Out2, R, R2> BaseParser<In, Out, R>.that(constraint: BaseParser<Ou
     return this seql lookup(constraint)
 }
 
-/** Returns parser that [f] returns. Same parser will be passed as argument of [f]. You can use it to define parser that uses itself.
- * @sample org.parser.samples.fixExample */
+/** Returns parser that [f] returns. Same parser will be passed as argument of [f]. You can use it to define parser that uses itself. */
 fun <I, O, R> fix(name: String = "fix", f: (BaseParser<I, O, R>) -> BaseParser<I, O, R>): BaseParser<I, O, R> {
     val p = LazyParser<I, O, R>()
     p.p = f(p)
-    p.view = name
+    p.p.view = name
     return p
 }
 
@@ -131,6 +130,7 @@ val <S, R> BaseParser<S, S, R>.many: BaseParser<S, S, List<R>>
     get() {
         val name = "(${this.view})*"
         return fix(name) { manyP ->
+            manyP.view = name
             val res =
                 success<S, List<R>>(emptyList()) or ((this seq manyP) using { head, tail -> listOf(head) + tail })
             res.view = name
