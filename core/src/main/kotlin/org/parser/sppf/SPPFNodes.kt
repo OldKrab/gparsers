@@ -1,7 +1,6 @@
 package org.parser.sppf
 
 import org.parser.combinators.BaseParser
-import org.parser.combinators.Parser
 import java.util.*
 import kotlin.collections.ArrayList
 

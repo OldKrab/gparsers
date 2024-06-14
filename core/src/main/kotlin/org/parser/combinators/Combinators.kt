@@ -1,24 +1,13 @@
 package org.parser.combinators
 
+import org.parser.sppf.NonPackedNode
 import org.parser.sppf.SPPFStorage
 
 
 /** Returns parser that, for all output states of current parser, runs the [p2] parser.
  * Parser returns all possible combinations of results from the current and [p2] parsers. */
 infix fun <In, Out1, R1, Out2, R2> BaseParser<In, Out1, R1>.seq(p2: BaseParser<Out1, Out2, R2>): BaseParser<In, Out2, Pair<R1, R2>> {
-    val p1 = this
-    val name = "${p1.view} ${p2.view}"
-    return fix(name) { q ->
-        Parser.memo(name) { sppf, i ->
-            p1.parse(sppf, i)
-                .flatMap { t1 ->
-                    p2.parse(sppf, t1.rightState)
-                        .map { t2 ->
-                            sppf.getIntermediateNode(q, t1, t2)
-                        }
-                }
-        }
-    }
+    return MemoParser(SeqParser(this, p2))
 }
 
 /** Same as [seq] but returns parser that returns results only from the current parser. */
@@ -33,21 +22,12 @@ infix fun <In, Out1, R1, Out2, R2> BaseParser<In, Out1, R1>.seqr(p2: BaseParser<
 
 private fun <In, Out, R> BaseParser<In, Out, R>.rule1(head: BaseParser<In, Out, R>): BaseParser<In, Out, R> {
     val p = this
-    return Parser.new(view, !p.isMemoized) { sppf, inS ->
-        p.parse(sppf, inS).map { t -> sppf.getIntermediateNode(head, t) }
-    }
+    return Rule1Parser(head, p)
 }
 
 /** Returns parser that combines results of the current and [p2] parser. */
 infix fun <In, Out, R> BaseParser<In, Out, R>.or(p2: BaseParser<In, Out, R>): BaseParser<In, Out, R> {
-    val name = "${this.view} | ${p2.view}"
-    return fix(name) { q ->
-        val left = this@or.rule1(q)
-        val right = p2.rule1(q)
-        Parser.memo(name) { sppf, input ->
-            left.parse(sppf, input).orElse { right.parse(sppf, input) }
-        }
-    }
+    return MemoParser(OrParser(this, p2))
 }
 
 /** Returns parser that combines results of all provided parsers. */
@@ -55,24 +35,15 @@ fun <In, Out, R> rule(
     first: BaseParser<In, Out, R>,
     vararg rest: BaseParser<In, Out, R>
 ): BaseParser<In, Out, R> {
-    val name = "${first.view} ${rest.joinToString { " | ${it.view}" }}"
-    return fix(name) { q ->
-        val first_ = first.rule1(q)
-        val rest_ = rest.map{ it.rule1(q) }
-        Parser.memo(name) { sppf, input ->
-            val firstRes = first_.parse(sppf, input)
-            rest_.fold(firstRes) { acc, cur ->
-                acc.orElse { cur.parse(sppf, input) }
-            }
-        }
-    }
-
+    return MemoParser(RuleParser(first, *rest))
 }
 
 fun <In, Out, R> lookup(p: BaseParser<In, Out, R>): BaseParser<In, In, Unit> {
-    return Parser.memo("lookup") { _, input ->
-        val sppf = SPPFStorage()
-        p.parse(sppf, input).map { sppf.getEpsilonNode(input) }
+    return object : BaseParser<In, In, Unit>(p.view) {
+        override fun parse(sppf: SPPFStorage, inS: In): ParserResult<NonPackedNode<In, In, Unit>> {
+            val sppf = SPPFStorage()
+            return p.parse(sppf, inS).map { sppf.getEpsilonNode(inS) }
+        }
     }
 }
 
@@ -90,9 +61,7 @@ fun <I, O, R> fix(name: String = "fix", f: (BaseParser<I, O, R>) -> BaseParser<I
 
 /** Returns same parser where result of this parser will be replaced with [f]. */
 infix fun <In, Out, A, B> BaseParser<In, Out, A>.using(f: (A) -> B): BaseParser<In, Out, B> {
-    return Parser.memo(this.view) { sppf, input ->
-        this.parse(sppf, input).map { t -> sppf.withAction(t, f) }
-    }
+    return UsingParser(this, f)
 }
 
 //TODO we should generate the next `using` functions
@@ -110,20 +79,29 @@ infix fun <In, Out, A1, A2, A3, A4, B> BaseParser<In, Out, Pair<Pair<Pair<A1, A2
 
 /** Returns parser that not change state and returns Unit */
 fun <S> eps(): BaseParser<S, S, Unit> {
-    return Parser.new("eps") { sppf, i ->
-        ParserResult.success(sppf.getEpsilonNode(i))
+    return object : BaseParser<S, S, Unit>("eps") {
+        override fun parse(sppf: SPPFStorage, inS: S): ParserResult<NonPackedNode<S, S, Unit>> {
+            return ParserResult.success(sppf.getEpsilonNode(inS))
+        }
     }
 }
 
 /** Returns parser that not change state and returns [v]. */
 fun <S, R> success(v: R): BaseParser<S, S, R> {
-    return Parser.new("success($v)") { sppf, s ->
-        ParserResult.success(sppf.getTerminalNode(s, s, v))
+    return object : BaseParser<S, S, R>("eps") {
+        override fun parse(sppf: SPPFStorage, inS: S): ParserResult<NonPackedNode<S, S, R>> {
+            return ParserResult.success(sppf.getTerminalNode(inS, inS, v))
+        }
     }
 }
 
 /** Returns parser that not change state and returns nothing. */
-fun <S, R> fail(): BaseParser<S, S, R> = Parser.memo("fail") { _, _ -> ParserResult.failure() }
+fun <S, R> fail(): BaseParser<S, S, R> = object : BaseParser<S, S, R>("fail") {
+    override fun parse(sppf: SPPFStorage, inS: S): ParserResult<NonPackedNode<S, S, R>> {
+        return ParserResult.failure()
+    }
+}
+
 
 /** Returns parser that applies this parser zero or more times. Parser returns [List] of results. */
 val <S, R> BaseParser<S, S, R>.many: BaseParser<S, S, List<R>>

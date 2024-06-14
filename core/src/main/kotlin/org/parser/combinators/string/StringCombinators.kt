@@ -1,9 +1,9 @@
 package org.parser.combinators.string
 
 import org.parser.combinators.BaseParser
-import org.parser.combinators.Parser
 import org.parser.combinators.ParserResult
 import org.parser.sppf.NonPackedNode
+import org.parser.sppf.SPPFStorage
 
 /** State of string parsing. Contains string and position in it. */
 data class StringPos(val str: String, val pos: Int) {
@@ -24,19 +24,32 @@ fun <R> String.applyParser(parser: StringParser<R>): List<NonPackedNode<StringPo
 
 /** Returns parser that parses this string. */
 val String.p: StringParser<String>
-    get() = Parser.memo("\"$this\"") { sppf, i ->
-        if (i.str.startsWith(this, i.pos))
-            ParserResult.success(sppf.getTerminalNode(i, i.move(this.length), this))
-        else
-            ParserResult.failure()
+    get() = object : StringParser<String>(this) {
+        override fun parse(
+            sppf: SPPFStorage,
+            inS: StringPos
+        ): ParserResult<NonPackedNode<StringPos, StringPos, String>> {
+            val str = this@p
+            return if (inS.str.startsWith(str, inS.pos))
+                ParserResult.success(sppf.getTerminalNode(inS, inS.move(str.length), str))
+            else
+                ParserResult.failure()
+        }
     }
 
 val Regex.p: StringParser<String>
-    get() = Parser.memo("\"$this\"") { sppf, i ->
-        val matchRes = this.matchAt(i.str, i.pos)
-        if (matchRes != null) {
-            val match = matchRes.value
-            ParserResult.success(sppf.getTerminalNode(i, i.move(match.length), match))
-        } else
-            ParserResult.failure()
+    get() = object : StringParser<String>("\"$this\"") {
+        override fun parse(
+            sppf: SPPFStorage,
+            inS: StringPos
+        ): ParserResult<NonPackedNode<StringPos, StringPos, String>> {
+            val str = this@p
+            val matchRes = str.matchAt(inS.str, inS.pos)
+            return if (matchRes != null) {
+                val match = matchRes.value
+                ParserResult.success(sppf.getTerminalNode(inS, inS.move(match.length), match))
+            } else
+                ParserResult.failure()
+        }
     }
+

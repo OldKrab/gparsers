@@ -1,7 +1,6 @@
 package org.parser.combinators.graph
 
 import org.parser.combinators.BaseParser
-import org.parser.combinators.Parser
 import org.parser.sppf.NonPackedNode
 
 /**

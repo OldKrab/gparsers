@@ -9,7 +9,7 @@ import kotlin.reflect.KProperty
  *
  * @property parse Parses [InS] state using [SPPFStorage] to store SPPF nodes. Returns [ParserResult] with [NonPackedNode] nodes.
  */
-abstract class BaseParser<InS, OutS, out R>(open val isMemoized: Boolean, open var view: String) {
+abstract class BaseParser<InS, OutS, out R>(open var view: String) {
     abstract fun parse(sppf: SPPFStorage, inS: InS): ParserResult<NonPackedNode<InS, OutS, R>>
 
 

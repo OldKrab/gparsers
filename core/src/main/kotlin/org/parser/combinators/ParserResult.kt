@@ -15,7 +15,6 @@ private fun <T> memoK(k: Continuation<T>): Continuation<T> {
 /** The [ParserResult] class represent all results of parsing. It uses Continuation-passing style. */
 @JvmInline
 value class ParserResult<out T>(val invoke: (Trampoline, Continuation<T>) -> Unit) {
-
     fun getResults(): List<T> {
         val results = ArrayList<T>()
         val trampoline = Trampoline()

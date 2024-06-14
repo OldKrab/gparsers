@@ -7,7 +7,7 @@ import kotlin.reflect.KProperty
 /** [LazyParser] represent parser with late initialization. Useful when need create recursive parser.
  *
  *  Real parser should be written into [p] field. */
-class LazyParser<InS, OutS, R> : BaseParser<InS, OutS, R>(false, "lazy") {
+class LazyParser<InS, OutS, R> : BaseParser<InS, OutS, R>("lazy") {
     lateinit var p: BaseParser<InS, OutS, R>
 
     override var view: String = "lazy"
@@ -17,9 +17,6 @@ class LazyParser<InS, OutS, R> : BaseParser<InS, OutS, R>(false, "lazy") {
                 p.view = value
             field = value
         }
-
-    override val isMemoized: Boolean
-        get() = if (::p.isInitialized) p.isMemoized else false
 
     override fun parse(sppf: SPPFStorage, inS: InS): ParserResult<NonPackedNode<InS, OutS, R>> {
         if (!this::p.isInitialized)
