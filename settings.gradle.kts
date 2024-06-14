@@ -3,3 +3,4 @@ plugins {
 }
 include("core")
 include("neo4j")
+include("tests")

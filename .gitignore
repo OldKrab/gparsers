@@ -1,3 +1,4 @@
+temp_dbs/
 .gradle
 build/
 !gradle/wrapper/gradle-wrapper.jar
