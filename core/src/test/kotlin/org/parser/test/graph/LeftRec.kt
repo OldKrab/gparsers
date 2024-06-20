@@ -1,12 +1,9 @@
 package org.parser.test.graph
 
-import org.parser.ParserTests.saveDotsToFolder
 import org.parser.combinators.*
 import org.parser.combinators.graph.VertexState
-import org.parser.test.graph.LazyParser
 import org.parser.test.graph.TestCombinators.outE
 import org.parser.test.graph.TestCombinators.outV
-import org.parser.test.graph.TestCombinators.v
 import org.parser.test.graph.TestCombinators.vertexEps
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -22,13 +19,13 @@ class LeftRec {
 
         val x by outV { it.value == "x" }
         val a by outE { it.label == "A" }
-        val S by LazyParser<TestVertexState, TestVertexState, List<Pair<TestEdge, TestVertex>>>()
-        S.p = rule(
+        val S by LateInitParser<TestVertexState, TestVertexState, List<Pair<TestEdge, TestVertex>>>()
+        S.init(rule(
             (S seq a seq x) using { prefix, e, v ->
                 prefix + Pair(e, v)
             },
             vertexEps() using { _ -> emptyList() },
-        )
+        ))
 
         val results = S.parseStateForResults(VertexState(gr, vX)).take(3)
         assertEquals(

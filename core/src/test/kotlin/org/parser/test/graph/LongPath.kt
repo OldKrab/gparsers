@@ -1,12 +1,9 @@
 package org.parser.test.graph
 
-import org.parser.ParserTests.saveDotsToFolder
 import org.parser.combinators.*
 import org.parser.combinators.graph.VertexState
-import org.parser.test.graph.LazyParser
 import org.parser.test.graph.TestCombinators.outE
 import org.parser.test.graph.TestCombinators.outV
-import org.parser.test.graph.TestCombinators.v
 import org.parser.test.graph.TestCombinators.vertexEps
 import kotlin.test.Test
 import kotlin.test.assertEquals

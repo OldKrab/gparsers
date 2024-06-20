@@ -17,12 +17,12 @@ interface GraphCombinators<V, E> {
     fun ePred(f: (E) -> Boolean): (E) -> Boolean = f
 
     /** Returns epsilon parser that accept [EdgeState]. */
-    fun edgeEps(): BaseParser<EdgeState<V, E>, EdgeState<V, E>, Unit> {
+    fun edgeEps(): Parser<EdgeState<V, E>, EdgeState<V, E>, Unit> {
         return eps()
     }
 
     /** Returns epsilon parser that accept [VertexState]. */
-    fun vertexEps(): BaseParser<VertexState<V, E>, VertexState<V, E>, Unit> {
+    fun vertexEps(): Parser<VertexState<V, E>, VertexState<V, E>, Unit> {
         return eps()
     }
 
@@ -40,7 +40,7 @@ interface GraphCombinators<V, E> {
     }
 
     /** Returns vertex parser that parses incoming vertex of [EdgeState]'s edge if vertex match [p]. */
-    fun inV(p: (V) -> Boolean = { true }): BaseParser<EdgeState<V, E>, VertexState<V, E>, V> {
+    fun inV(p: (V) -> Boolean = { true }): Parser<EdgeState<V, E>, VertexState<V, E>, V> {
         return object : EVGraphParser<V, E, V>("inV") {
             override fun parse(sppf: SPPFStorage, inS: EdgeState<V, E>)
                     : ParserResult<NonPackedNode<EdgeState<V, E>, VertexState<V, E>, V>> {
@@ -53,8 +53,8 @@ interface GraphCombinators<V, E> {
     }
 
     /** Returns vertex parser that parses all vertexes of graph that match [p]. Parser accept [StartState]. */
-    fun v(p: (V) -> Boolean = { true }): BaseParser<StartState<V, E>, VertexState<V, E>, V> {
-        return object : BaseParser<StartState<V, E>, VertexState<V, E>, V>("v") {
+    fun v(p: (V) -> Boolean = { true }): Parser<StartState<V, E>, VertexState<V, E>, V> {
+        return object : Parser<StartState<V, E>, VertexState<V, E>, V>("v") {
             override fun parse(sppf: SPPFStorage, inS: StartState<V, E>)
                     : ParserResult<NonPackedNode<StartState<V, E>, VertexState<V, E>, V>> {
                 val gr = inS.gr
@@ -66,8 +66,8 @@ interface GraphCombinators<V, E> {
     }
 
     /** Returns edge parser that parses all edges of graph that match [p]. Parser accept [StartState]. */
-    fun edge(p: (E) -> Boolean = { true }): BaseParser<StartState<V, E>, EdgeState<V, E>, E> {
-        return object : BaseParser<StartState<V, E>, EdgeState<V, E>, E>("edge") {
+    fun edge(p: (E) -> Boolean = { true }): Parser<StartState<V, E>, EdgeState<V, E>, E> {
+        return object : Parser<StartState<V, E>, EdgeState<V, E>, E>("edge") {
             override fun parse(sppf: SPPFStorage, inS: StartState<V, E>)
                     : ParserResult<NonPackedNode<StartState<V, E>, EdgeState<V, E>, E>> {
                 val gr = inS.gr
@@ -88,7 +88,7 @@ interface GraphCombinators<V, E> {
     }
 
     /** Returns edge parser that parses all outgoing edges from a vertex in the [VertexState] that match [p]. */
-    fun outE(p: (E) -> Boolean = { true }): BaseParser<VertexState<V, E>, EdgeState<V, E>, E> {
+    fun outE(p: (E) -> Boolean = { true }): Parser<VertexState<V, E>, EdgeState<V, E>, E> {
         return object : VEGraphParser<V, E, E>("inV") {
             override fun parse(sppf: SPPFStorage, inS: VertexState<V, E>)
                     : ParserResult<NonPackedNode<VertexState<V, E>, EdgeState<V, E>, E>> {
@@ -100,7 +100,7 @@ interface GraphCombinators<V, E> {
     }
 
     /** Returns edge parser that parses all incoming edges to a vertex in the [VertexState] that match [p]. */
-    fun inE(p: (E) -> Boolean = { true }): BaseParser<VertexState<V, E>, EdgeState<V, E>, E> {
+    fun inE(p: (E) -> Boolean = { true }): Parser<VertexState<V, E>, EdgeState<V, E>, E> {
         return object : VEGraphParser<V, E, E>("inV") {
             override fun parse(sppf: SPPFStorage, inS: VertexState<V, E>)
                     : ParserResult<NonPackedNode<VertexState<V, E>, EdgeState<V, E>, E>> {
@@ -111,7 +111,7 @@ interface GraphCombinators<V, E> {
         }
     }
 
-    fun throughOutE(p: (E) -> Boolean = { true }): BaseParser<VertexState<V, E>, VertexState<V, E>, E> {
+    fun throughOutE(p: (E) -> Boolean = { true }): Parser<VertexState<V, E>, VertexState<V, E>, E> {
         return object : VVGraphParser<V, E, E>("inV") {
             override fun parse(sppf: SPPFStorage, inS: VertexState<V, E>)
                     : ParserResult<NonPackedNode<VertexState<V, E>, VertexState<V, E>, E>> {
@@ -125,7 +125,7 @@ interface GraphCombinators<V, E> {
         }
     }
 
-    fun throughInE(p: (E) -> Boolean = { true }): BaseParser<VertexState<V, E>, VertexState<V, E>, E> {
+    fun throughInE(p: (E) -> Boolean = { true }): Parser<VertexState<V, E>, VertexState<V, E>, E> {
         return object : VVGraphParser<V, E, E>("inV") {
             override fun parse(sppf: SPPFStorage, inS: VertexState<V, E>)
                     : ParserResult<NonPackedNode<VertexState<V, E>, VertexState<V, E>, E>> {

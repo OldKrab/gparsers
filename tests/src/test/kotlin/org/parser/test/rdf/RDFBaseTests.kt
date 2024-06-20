@@ -92,7 +92,7 @@ class RDFBaseTests {
 
     fun <T> parse(
         graph: DefaultNeo4jGraph,
-        grammar: BaseParser<DefaultNeo4jVertexState, DefaultNeo4jVertexState, T>
+        grammar: Parser<DefaultNeo4jVertexState, DefaultNeo4jVertexState, T>
     ): Int {
         val nodes = graph.getVertexes()
         var size = 0
@@ -112,12 +112,12 @@ class RDFBaseTests {
     }
 
 
-    fun firstGrammar(): BaseParser<DefaultNeo4jVertexState, DefaultNeo4jVertexState, Any> {
+    fun firstGrammar(): Parser<DefaultNeo4jVertexState, DefaultNeo4jVertexState, Any> {
         val subclassof1 = throughInE { it.label == "subclassof" }
         val subclassof = throughOutE { it.label == "subclassof" }
         val type1 = throughInE { it.label == "type" }
         val type = throughOutE { it.label == "type" }
-        val S = LazyParser<DefaultNeo4jVertexState, DefaultNeo4jVertexState, Any>()
+        val S = LateInitParser<DefaultNeo4jVertexState, DefaultNeo4jVertexState, Any>()
         S.p =
             (subclassof1 seq (S or eps()) seq subclassof) or
                     (type1 seq (S or eps()) seq type)
@@ -125,11 +125,11 @@ class RDFBaseTests {
         return S
     }
 
-    fun secondGrammar(): BaseParser<DefaultNeo4jVertexState, DefaultNeo4jVertexState, Any> {
+    fun secondGrammar(): Parser<DefaultNeo4jVertexState, DefaultNeo4jVertexState, Any> {
         val subclassof1 = throughInE { it.label == "subclassof" }
         val subclassof = throughOutE { it.label == "subclassof" }
 
-        val S = LazyParser<DefaultNeo4jVertexState, DefaultNeo4jVertexState, Any>()
+        val S = LateInitParser<DefaultNeo4jVertexState, DefaultNeo4jVertexState, Any>()
         S.p = (subclassof1 seq (S or eps()) seq subclassof)
 
         return ((S or eps()) seq subclassof)

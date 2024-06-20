@@ -1,6 +1,6 @@
 package org.parser.sppf
 
-import org.parser.combinators.BaseParser
+import org.parser.combinators.Parser
 import java.util.*
 import kotlin.collections.ArrayList
 
@@ -39,7 +39,7 @@ sealed class NonPackedNode<LS, RS, out R>(val leftState: LS, val rightState: RS)
 
 
 open class IntermediateNode<LS, RS, R, CR1, CR2>(
-    val parser: BaseParser<LS, RS, *>,
+    val parser: Parser<LS, RS, *>,
     leftState: LS,
     rightState: RS,
     val action: (Pair<CR1?, CR2>) -> R
@@ -92,7 +92,7 @@ open class IntermediateNode<LS, RS, R, CR1, CR2>(
 
 class NonTerminalNode<LS, RS, R, CR>(
     val nt: String,
-    val parser: BaseParser<LS, RS, CR>,
+    val parser: Parser<LS, RS, CR>,
     leftState: LS,
     rightState: RS,
     val action: (CR) -> R

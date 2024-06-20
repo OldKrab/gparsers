@@ -66,12 +66,12 @@ class StringParserTests {
         assertEquals(1, results.size)
         assertEquals(setOf("[aa]", "[a][a]"), results[0].toSet())
 
-        val expr = LazyParser<StringPos, StringPos, Int>()
-        expr.p = rule(
+        val expr = LateInitParser<StringPos, StringPos, Int>()
+        expr.init(rule(
             (expr seql "+".p seq expr) using { x, y -> x + y },
             (expr seql "−".p seq expr) using { x, y -> x - y },
             "(".p seqr expr seql ")".p,
-            "[0−9]*".toRegex().p using { it.toInt() })
+            "[0−9]*".toRegex().p using { it.toInt() }))
     }
 
     @Test
@@ -95,11 +95,11 @@ class StringParserTests {
 
     @Test
     fun ambiguousWithRule() {
-        val s by LazyParser<StringPos, StringPos, String>()
-        s.p = rule(
+        val s by LateInitParser<StringPos, StringPos, String>()
+        s.init(rule(
             ("a".p seqr s seql "a".p seq s) using { s1, s2 -> "[a${s1}a]$s2" },
             "".p
-        )
+        ))
 
         val str = "aaaa"
         val nodes = str.applyParser(s)
@@ -155,13 +155,13 @@ class StringParserTests {
 
     @Test
     fun expressions() {
-        val expr = LazyParser<StringPos, StringPos, Int>()
-        expr.p = rule(
+        val expr = LateInitParser<StringPos, StringPos, Int>()
+        expr.init(rule(
             expr seql "+".p seq expr using { x: Int, y: Int -> x + y },
             expr seql "-".p seq expr using { x: Int, y: Int -> x - y },
             "(".p seqr expr seql ")".p,
             "[0-9]*".toRegex().p using { it.toInt() }
-        )
+        ))
         val str = "10+(20-5)"
         val nodes = str.applyParser(expr).filter { it.rightState.pos == str.length }
         assertEquals(1, nodes.size)

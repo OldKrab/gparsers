@@ -1,6 +1,6 @@
 package org.parser.combinators.graph
 
-import org.parser.combinators.BaseParser
+import org.parser.combinators.Parser
 import org.parser.sppf.NonPackedNode
 
 /**
@@ -28,14 +28,14 @@ interface Graph<V, E> {
     /**
      * Applies parser to graph from every vertex. Parser should accept state [StartState].
      * @return list of [NonPackedNode]. */
-    fun <O, R> applyParser(parser: BaseParser<StartState<V, E>, O, R>): List<NonPackedNode<StartState<V, E>, O, R>> {
+    fun <O, R> applyParser(parser: Parser<StartState<V, E>, O, R>): List<NonPackedNode<StartState<V, E>, O, R>> {
         return parser.parseState(StartState(this))
     }
 
     /**
      * Applies parser to graph from every vertex. Parser should accept state [StartState].
      * @return list of [NonPackedNode]. */
-    fun <O, R> applyParserForResults(parser: BaseParser<StartState<V, E>, O, R>): Sequence<R> {
+    fun <O, R> applyParserForResults(parser: Parser<StartState<V, E>, O, R>): Sequence<R> {
         val nodes =  parser.parseState(StartState(this))
         return nodes.asSequence().flatMap { it.getResults() }
     }
